@@ -63,7 +63,7 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), 
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
-        raise HTTPException(400, f"Format {ext or '?'} belum didukung. Pakai WAV/FLAC/MP3/M4A/OGG.")
+        raise HTTPException(400, "Jenis file ini belum didukung. Coba file WAV, FLAC, MP3, M4A, atau OGG.")
     rid = uuid.uuid4().hex[:12]
     folder = FOLDER_REKAMAN / rid
     path_asli = folder / f"asli{ext}"
@@ -82,7 +82,7 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), 
             logger.exception("Pembersihan basis data gagal: %s", rid)
         shutil.rmtree(folder, ignore_errors=True)
         if isinstance(e, AudioTidakValid):
-            raise HTTPException(422, f"{nama}: {e}") from e
+            raise HTTPException(422, f"{nama}: {e} Coba file WAV lain.") from e
         raise HTTPException(500, "Analisis gagal karena gangguan server. Coba lagi nanti atau gunakan rekaman lain.") from e
 
 

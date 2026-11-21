@@ -57,3 +57,28 @@ input.label.tersimpan { border-color: var(--accent); }
 tr.diputar { background: #EEF6F0; }
 .prosa li { margin-bottom: 6px; }
 footer { text-align: center; padding: 16px; font-size: 12px; }
+.peringatan { padding: 12px; background: #fff6df; border-left: 4px solid #9A5B00; color: #684000; }
+.status-label { display: block; margin-top: 6px; }
+.unduh-audio { margin: 6px 0 10px; }
+#tabel-jendela label { display: block; }
+@media (max-width: 600px) {
+  button, .tab, .tombol, .tombol.kecil, input.label, .cek, footer a { min-height: 44px; }
+  button, .tab, .tombol, footer a { display: inline-flex; align-items: center; justify-content: center; }
+  .putar { min-width: 44px; }
+  .cek input { width: 44px; height: 44px; flex: 0 0 44px; margin: 0; accent-color: var(--accent); }
+  .cek { color: var(--text); }
+  audio { height: 44px; }
+  footer a { padding: 0 8px; }
+  #daftar li { min-height: 44px; }
+  .wadah-jendela { overflow: visible; }
+  #tabel-jendela, #tabel-jendela tbody { display: block; width: 100%; }
+  #tabel-jendela thead { display: none; }
+  #tabel-jendela tr { display: block; border: 1px solid var(--border); border-radius: var(--radius); margin: 12px 0; padding: 12px; }
+  #tabel-jendela td { display: block; padding: 8px 0; border: 0; overflow-wrap: anywhere; }
+  #tabel-jendela td::before { content: attr(data-judul); display: block; font: 600 13px/1.45 var(--font); margin-bottom: 6px; }
+  #tabel-jendela td:last-child::before { display: none; }
+  #tabel-jendela label { font-weight: 600; margin-bottom: 6px; }
+  #tabel-jendela .saran div { white-space: normal; }
+  #tabel-jendela input.label { width: 100%; min-width: 0; font-size: 16px; }
+  .prosa code { overflow-wrap: anywhere; }
+}
