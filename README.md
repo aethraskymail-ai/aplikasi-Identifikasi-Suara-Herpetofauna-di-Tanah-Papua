@@ -64,8 +64,30 @@ python -m suarakatak.batch --masukan "I:/PAR" --keluaran "I:/HASIL_EKSTRAKSI/HAS
 ```
 
 Hanya file 17:30–21:00 (ubah dengan `--jam`). Hasil: `HASIL/<PAR>/<tanggal>/*.WAV` + `CONFIG.TXT`,
-`ringkasan.csv` (nada yang di-notch, level pita, % aktif pita katak, tebakan Perch) dan
-`embedding/<PAR>/*.npz` dengan `--perch`. Bisa dihentikan dan dilanjutkan.
+`ringkasan.csv` (nada yang di-notch, level pita, % aktif pita katak) dan
+`embedding/<PAR>/*.npz` dengan `--perch`. Kolom `tebakan_perch_belum_terverifikasi`
+berisi tebakan model global, **bukan identifikasi spesies yang diverifikasi**. `status=ok`
+hanya berarti pemrosesan berhasil. Perch batch memakai audio keluaran terfilter.
+
+Ganti jalur contoh dengan lokasi hardisk Anda (Linux, misalnya `--masukan /media/anda/PAR`).
+Folder masukan yang tidak ada menghasilkan galat; bila tidak ada WAV/FLAC dalam jendela waktu,
+pesan menyatakannya secara eksplisit. CONFIG.TXT disalin, bukan dibaca untuk koreksi zona waktu;
+jam pada nama file dianggap sudah waktu lokal WIT.
+
+Tekan Ctrl-C untuk berhenti, lalu jalankan kembali **perintah yang sama** untuk melanjutkan.
+WAV dan embedding ditulis melalui file sementara lalu diganti secara atomik.
+CSV dipadatkan secara atomik saat mulai dan selesai (juga saat Ctrl-C); selama proses,
+satu baris ditambahkan dan di-flush per file. Bila proses terputus paksa, baris terakhir
+per file berlaku dan duplikasi dibersihkan saat mulai lagi, tanpa menulis ulang seluruh CSV per file.
+Hasil dilewati hanya bila WAV dan baris CSV sukses sudah ada (serta embedding dan tebakan
+bila memakai `--perch`). WAV yang sudah ada dipakai kembali untuk melengkapi hasil yang kurang;
+ringkasan penyaringan yang belum tercatat dihitung ulang dari sumber, tanpa menimpa WAV yang valid.
+Karena itu rekaman sumber tetap perlu tersedia. Uji `--batas 20` tanpa Perch lalu menjalankan
+`--perch` pada folder keluaran yang sama juga melengkapi embedding file uji.
+File gagal dicoba ulang; CSV menyimpan satu baris terbaru per file, bukan duplikasi kegagalan.
+CSV format lama dibaca dan kolom tebakan diganti otomatis. Kode keluar: 0 normal (termasuk
+tidak ada file baru), 1 ada file gagal, 2 folder masukan tidak ditemukan, 130 dihentikan Ctrl-C.
+Jangan jalankan dua proses batch sekaligus pada folder keluaran yang sama.
 
 ## Struktur
 
