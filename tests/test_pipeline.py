@@ -13,6 +13,17 @@ def test_nama_file_audiomoth():
     assert info_nama_file("rekaman.wav").waktu is None
 
 
+def test_aktivitas_panggilan_memenuhi_rekaman_pendek():
+    sr = 48000
+    t = np.arange(int(sr * 2.5)) / sr
+    noise = np.random.default_rng(12).normal(0, 0.001, len(t))
+    call = 0.1 * np.sin(2 * np.pi * 3000 * t) * ((t >= 0.1) & (t < 2.3))
+    segmen = deteksi.segmen_aktif(noise + call, sr)
+    assert deteksi.ringkas_aktivitas(segmen, 2.5)["persen_aktif"] >= 80
+    assert deteksi.segmen_aktif(noise, sr) == []
+    assert deteksi.segmen_aktif(np.zeros_like(t), sr) == []
+
+
 def test_pipeline_meredam_gangguan_dan_menjaga_pita_katak():
     x = contoh.buat(durasi_s=20)
     h = pipeline.jalankan(x, contoh.SR)
