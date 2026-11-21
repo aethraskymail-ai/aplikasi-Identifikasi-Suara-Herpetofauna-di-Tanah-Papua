@@ -69,7 +69,7 @@
         <li><strong>Model kustom</strong> belajar dari label Anda sendiri pada embedding Perch. Inilah jalur identifikasi jenis Papua. Mulailah dengan beberapa jenis yang sudah yakin (diverifikasi ahli) plus kelas <em>bukan katak</em>.</li>
       </ol>
       <h3>Untuk 102.734 file di hardisk</h3>
-      <p>Jalankan skrip batch di komputer yang tersambung ke hardisk (lihat README): <code>python -m suarakatak.batch --masukan I:\PAR --keluaran I:\HASIL_EKSTRAKSI\HASIL</code>. Skrip memilih jam 17:30–21:00 dari nama file, menyaring, dan menulis CSV ringkasan + embedding Perch.</p>
+      <p>Jalankan skrip batch di komputer yang tersambung ke hardisk (lihat <a href="https://github.com/aethraskymail-ai/aplikasi-Identifikasi-Suara-Herpetofauna-di-Tanah-Papua/blob/devin/1795270601-batch-resume-fixes/README.md">README: pemasangan dan batch</a>): <code>python -m suarakatak.batch --masukan "I:/PAR" --keluaran "I:/HASIL_EKSTRAKSI/HASIL" --perch</code>. Ganti jalur sesuai lokasi hardisk Anda. Skrip memilih jam 17:30–21:00 dari nama file, menyaring, dan menulis CSV ringkasan + embedding Perch dari audio terfilter. Tebakan Perch belum diverifikasi, bukan identifikasi jenis Papua; status berhasil hanya berarti pemrosesan selesai. CONFIG.TXT disalin, bukan dipakai untuk koreksi waktu. Tekan Ctrl-C lalu ulangi perintah yang sama untuk melanjutkan; hasil yang belum lengkap dilengkapi, file gagal dicoba ulang tanpa duplikasi baris CSV.</p>
       <p class="muted">Rekaman contoh sintetis hanya meniru profil gangguan PAR001 (dengung, serangga 2.063 Hz, jangkrik) dan pulsa ~2.940 Hz; itu bukan suara katak asli.</p>
     </div>
   </section>
