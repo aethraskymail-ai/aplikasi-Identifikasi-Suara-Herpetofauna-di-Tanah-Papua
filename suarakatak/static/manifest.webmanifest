@@ -1,0 +1,14 @@
+{
+  "name": "Suara Katak Papua",
+  "short_name": "Suara Katak",
+  "description": "Identifikasi suara herpetofauna Tanah Papua dari rekaman AudioMoth",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFBF9",
+  "theme_color": "#1F5F3A",
+  "lang": "id",
+  "icons": [
+    {"src": "/static/ikon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
