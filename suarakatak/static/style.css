@@ -1,0 +1,59 @@
+:root {
+  --bg: #FAFBF9; --surface: #FFFFFF; --text: #18201B; --text-muted: rgba(24,32,27,.58);
+  --border: rgba(0,0,0,.10); --accent: #1F7A45; --accent-fg: #FFFFFF;
+  --primary-action: var(--accent); --primary-action-fg: var(--accent-fg);
+  --radius: 6px; --font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.muted { color: var(--text-muted); }
+.topbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.topbar h1 { font-size: 17px; margin: 0; }
+.topbar p { margin: 0; font-size: 12.5px; }
+.logo { width: 36px; height: 36px; border-radius: 8px; }
+nav { margin-left: auto; display: flex; gap: 4px; }
+.tab { border: 1px solid transparent; background: none; padding: 6px 10px; border-radius: var(--radius); cursor: pointer; font: inherit; color: var(--text-muted); }
+.tab.aktif { border-color: var(--border); color: var(--text); background: var(--bg); }
+main { padding: 14px 16px; max-width: 1440px; margin: 0 auto; }
+.kartu { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; min-width: 0; }
+.kartu h2 { font-size: 15px; margin: 0 0 8px; }
+.kartu h3 { font-size: 13.5px; margin: 14px 0 6px; }
+.unggah.seret { border-color: var(--accent); border-style: dashed; }
+.baris { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tombol { display: inline-block; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 6px 12px; border-radius: var(--radius); cursor: pointer; font: inherit; text-decoration: none; }
+.tombol.utama { background: var(--primary-action); color: var(--primary-action-fg); border-color: var(--primary-action); }
+.tombol.kecil { padding: 2px 8px; font-size: 12.5px; }
+.tombol:disabled { opacity: .5; cursor: default; }
+.cek { display: inline-flex; gap: 6px; align-items: center; color: var(--text-muted); }
+.tata { display: grid; grid-template-columns: 260px 1fr; gap: 12px; }
+@media (max-width: 860px) { .tata { grid-template-columns: 1fr; } nav { margin-left: 0; } }
+#daftar { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow: auto; }
+#daftar li { padding: 7px 8px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; }
+#daftar li:hover { background: var(--bg); }
+#daftar li.aktif { border-color: var(--accent); }
+#daftar .nama { word-break: break-all; }
+.tabel { border-collapse: collapse; width: 100%; font-size: 13px; }
+.tabel th, .tabel td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.tabel th { font-weight: 600; color: var(--text-muted); font-size: 12px; }
+.tabel td.angka, .tabel th.angka { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.gulir { overflow-x: auto; }
+.spek { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); display: block; margin-bottom: 6px; }
+.dua { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 860px) { .dua { grid-template-columns: 1fr; } }
+audio { width: 100%; height: 36px; }
+.info { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 8px; }
+.info span b { font-weight: 600; }
+.status-ok { color: var(--accent); }
+.status-warn { color: #9A5B00; }
+.bar { height: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; width: 70px; display: inline-block; vertical-align: middle; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.saran { font-size: 12.5px; }
+.saran div { white-space: nowrap; }
+input.label { width: 150px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; }
+input.label.tersimpan { border-color: var(--accent); }
+tr.diputar { background: #EEF6F0; }
+.prosa li { margin-bottom: 6px; }
+footer { text-align: center; padding: 16px; font-size: 12px; }
