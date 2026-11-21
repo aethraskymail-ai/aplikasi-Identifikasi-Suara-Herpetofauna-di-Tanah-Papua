@@ -34,7 +34,7 @@ def _persen_aktif(segmen: list[dict], a: float, b: float) -> float:
     return round(100 * tumpang / max(b - a, 1e-6), 1)
 
 
-def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = False):
+def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = False, nama_metadata: str = ""):
     """Mengembalikan (ringkasan JSON, daftar Jendela Perch atau [])."""
     try:
         x, sr = muat_audio(path_asli)
@@ -50,7 +50,7 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
     peringatan = []
     if tidak_terukur:
         peringatan.append(f"Laju sampel {sr} Hz: frekuensi di atas {sr / 2:g} Hz tidak terekam; pita {', '.join(tidak_terukur)} tidak bisa dinilai sepenuhnya. Gunakan rekaman dengan laju sampel lebih tinggi.")
-    info = info_nama_file(nama_file)
+    info = info_nama_file(nama_metadata or nama_file)
     hasil = pipeline.jalankan(x, sr)
     simpan_wav(folder / "terfilter.wav", hasil.audio, hasil.sr)
     gambar_spektrogram(x, sr, folder / "sebelum.png", "Sebelum penyaringan")

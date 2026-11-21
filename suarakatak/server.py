@@ -37,8 +37,8 @@ def _folder(rid: str) -> Path:
     return FOLDER_REKAMAN / rid
 
 
-def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool) -> dict:
-    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter)
+def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool, path_relatif: str = "") -> dict:
+    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter, path_relatif.replace("\\", "/"))
     ringkasan["id"] = rid
     ringkasan["file_asli"] = path_asli.name
     db.simpan_rekaman(rid, nama, ringkasan, jendela)
@@ -57,7 +57,7 @@ def status() -> dict:
 
 
 @app.post("/api/analisis")
-def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) -> dict:
+def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), path_relatif: str = Form("")) -> dict:
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
@@ -71,7 +71,7 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) 
             shutil.copyfileobj(file.file, f)
         if not path_asli.stat().st_size:
             raise AudioTidakValid("File kosong. Coba salin ulang dari kartu AudioMoth.")
-        return _proses(path_asli, folder, rid, nama, perch_terfilter)
+        return _proses(path_asli, folder, rid, nama, perch_terfilter, path_relatif)
     except Exception as e:
         logger.exception("Analisis unggahan gagal: %s", rid)
         try:

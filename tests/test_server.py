@@ -72,7 +72,7 @@ def test_8khz_pita_tidak_terukur(client):
 
 
 def test_error_tak_terduga_tidak_bocor(client, monkeypatch, caplog):
-    def gagal(path, folder, rid, nama, terfilter):
+    def gagal(path, folder, rid, nama, terfilter, path_relatif=""):
         server.db.simpan_rekaman(rid, nama, {}, [])
         raise RuntimeError("rahasia /internal/path command")
 
@@ -121,3 +121,21 @@ def test_pembersihan_db_gagal_folder_tetap_dihapus(client, monkeypatch, caplog, 
     assert "SQLite" not in response.text
     assert "Pembersihan basis data gagal" in caplog.text
     assert list(server.FOLDER_REKAMAN.iterdir()) == []
+
+
+@pytest.mark.parametrize("path_relatif,par", [
+    ("PAR003/20240101_183000.WAV", "PAR003"),
+    ("../../PAR003/20240101_183000.WAV", "PAR003"),
+    ("../20240101_183000.WAV", None),
+    ("", None),
+])
+def test_path_folder_hanya_metadata(client, path_relatif, par):
+    response = client.post("/api/analisis", files={"file": ("20240101_183000.WAV", wav(), "audio/wav")},
+                           data={"perch_terfilter": "false", "path_relatif": path_relatif})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["nama_file"] == "20240101_183000.WAV"
+    assert data["audiomoth"]["par"] == par
+    assert data["audiomoth"]["waktu"] == "2024-01-01 18:30:00"
+    assert (server.FOLDER_REKAMAN / data["id"] / "asli.wav").is_file()
+    assert len(list(server.FOLDER_REKAMAN.iterdir())) == 1

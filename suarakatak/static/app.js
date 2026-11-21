@@ -4,24 +4,26 @@ const fmt = (n, d = 1) => (n == null ? "–" : Number(n).toLocaleString("id-ID",
 let aktifId = null;
 let semuaLabel = [];
 
+function pesanError(status, detail) {
+  const pesan = ({
+    413: "File terlalu besar. Pilih rekaman yang lebih kecil atau potong menjadi beberapa bagian.",
+    500: "Server gagal memproses rekaman. Coba lagi nanti.",
+    502: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
+    503: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
+    504: "Server terlalu lama merespons. Coba lagi nanti atau gunakan rekaman lebih pendek.",
+  })[status] || "Permintaan gagal. Periksa file dan coba lagi.";
+  return status < 500 && typeof detail === "string" && detail.trim() ? detail : pesan;
+}
+
 async function api(url, opt) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15 * 60 * 1000);
   try {
     const r = await fetch(url, { credentials: "same-origin", ...opt, signal: controller.signal });
     if (!r.ok) {
-      let msg = ({
-        413: "File terlalu besar. Pilih rekaman yang lebih kecil atau potong menjadi beberapa bagian.",
-        500: "Server gagal memproses rekaman. Coba lagi nanti.",
-        502: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
-        503: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
-        504: "Server terlalu lama merespons. Coba lagi nanti atau gunakan rekaman lebih pendek.",
-      })[r.status] || "Permintaan gagal. Periksa file dan coba lagi.";
-      try {
-        const d = (await r.json()).detail;
-        if (r.status < 500 && typeof d === "string" && d.trim()) msg = d;
-      } catch (_) {}
-      throw new Error(msg);
+      let detail;
+      try { detail = (await r.json()).detail; } catch (_) {}
+      throw new Error(pesanError(r.status, detail));
     }
     return await r.json();
   } catch (e) {
@@ -176,28 +178,63 @@ function pasangPemutar() {
   );
 }
 
-async function unggah(files) {
+function unggahFile(fd, progres) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let interval;
+    xhr.open("POST", "/api/analisis");
+    xhr.timeout = 15 * 60 * 1000;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) progres(`Mengunggah ${Math.round(100 * e.loaded / e.total)}%`);
+    };
+    xhr.upload.onload = () => {
+      const mulai = Date.now();
+      const tampilkan = () => progres(`Menganalisis … ${Math.floor((Date.now() - mulai) / 1000)} detik berlalu`);
+      tampilkan();
+      interval = setInterval(tampilkan, 1000);
+    };
+    xhr.onload = () => {
+      let data;
+      try { data = JSON.parse(xhr.responseText); } catch (_) {}
+      if (xhr.status < 200 || xhr.status >= 300) reject(new Error(pesanError(xhr.status, data?.detail)));
+      else if (!data) reject(new Error("Balasan server tidak bisa dibaca. Coba lagi nanti."));
+      else resolve(data);
+    };
+    xhr.onerror = () => reject(new Error("Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi."));
+    xhr.ontimeout = () => reject(new Error("Analisis melebihi batas waktu 15 menit. Coba rekaman yang lebih pendek."));
+    xhr.onabort = () => reject(new Error("Unggahan dibatalkan. Pilih file untuk mencoba lagi."));
+    xhr.onloadend = () => clearInterval(interval);
+    xhr.send(fd);
+  });
+}
+
+async function unggah(files, folder = false) {
   const terfilter = $("#perch-terfilter").checked;
+  const audio = [...files].filter((f) => !folder || /\.(wav|flac|mp3|m4a|ogg|aac|mpga)$/i.test(f.name));
+  const dilewati = files.length - audio.length;
   let terakhir = null;
   const gagal = [];
   const progres = (pesan) => { $("#progres").textContent = [...gagal, pesan].join("\n"); };
   $("#progres").style.whiteSpace = "pre-line";
-  for (const [i, f] of [...files].entries()) {
-    progres(`Menganalisis ${i + 1}/${files.length}: ${f.name} …${f.size > 50 * 1024 * 1024 ? " File besar; proses dapat memakan waktu beberapa menit." : ""}`);
+  for (const [i, f] of audio.entries()) {
+    const tampilkan = (tahap) => progres(`${tahap} — ${i + 1}/${audio.length}: ${f.name}${f.size > 50 * 1024 * 1024 ? ". File besar; proses dapat memakan waktu beberapa menit." : ""}`);
+    tampilkan("Mengunggah 0%");
     const fd = new FormData();
     fd.append("file", f);
     fd.append("perch_terfilter", terfilter);
+    if (f.webkitRelativePath) fd.append("path_relatif", f.webkitRelativePath);
     try {
-      terakhir = await api("/api/analisis", { method: "POST", body: fd });
+      terakhir = await unggahFile(fd, tampilkan);
     } catch (e) {
       gagal.push(`${f.name} — Gagal: ${e.message}`);
     }
   }
-  progres(`Selesai: ${files.length - gagal.length} file berhasil; ${gagal.length} dari ${files.length} file gagal.`);
+  progres(`Selesai: ${audio.length - gagal.length} file berhasil; ${gagal.length} dari ${audio.length} file gagal.${dilewati ? ` ${dilewati} file dilewati: bukan audio.` : ""}`);
   if (terakhir) buka(terakhir.id);
 }
 
 $("#input-file").addEventListener("change", (e) => e.target.files.length && unggah(e.target.files));
+$("#input-folder").addEventListener("change", (e) => e.target.files.length && unggah(e.target.files, true));
 const zona = $("#zona-unggah");
 ["dragenter", "dragover"].forEach((ev) => zona.addEventListener(ev, (e) => { e.preventDefault(); zona.classList.add("seret"); }));
 ["dragleave", "drop"].forEach((ev) => zona.addEventListener(ev, (e) => { e.preventDefault(); zona.classList.remove("seret"); }));
