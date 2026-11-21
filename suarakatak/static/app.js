@@ -96,9 +96,10 @@ async function buka(id) {
     <p class="muted">${puncak.length} nada gangguan di-notch: ${puncak.map((p) => `${fmt(p.frekuensi_hz, 0)} Hz`).join(", ") || "–"} · gain normalisasi ${fmt(d.penyaringan.gain_normalisasi_db)} dB</p>
     <h3>Jendela 5 detik</h3>
     ${d.catatan_perch ? `<p class="status-warn">${esc(d.catatan_perch)}</p>` : ""}
-    ${adaMulai ? `<p class="muted">Kolom Perch = tebakan langsung model global (pembanding). ${d.model_kustom_aktif ? "Kolom model kustom = hasil model dari label Anda." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
+    ${adaMulai ? `<p class="status-warn">Saran model — belum diverifikasi; skor relatif, bukan probabilitas keberadaan.</p>
+    <p class="muted">Kolom Perch = saran model global (pembanding); skor dihitung relatif terhadap kumpulan kelas masing-masing kolom. ${d.model_kustom_aktif ? "Kolom model kustom = saran model dari label Anda, belum diverifikasi." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
     <div class="gulir"><table class="tabel" id="tabel-jendela"><thead><tr>
-      <th>Waktu</th><th>Aktivitas 2,4–3,8 kHz</th><th>Model kustom</th><th>Perch: amfibi teratas</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
+      <th>Waktu</th><th>Aktivitas 2,4–3,8 kHz</th><th>Model kustom</th><th>Perch: kelas amfibi saja</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
       ${d.jendela
         .map(
           (j) => `<tr data-idx="${j.idx}">

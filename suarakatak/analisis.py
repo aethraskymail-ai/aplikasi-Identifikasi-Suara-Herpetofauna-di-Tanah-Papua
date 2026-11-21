@@ -8,15 +8,23 @@ from . import deteksi, perch, pipeline
 from .audio import info_nama_file, muat_audio, simpan_wav
 
 
-def gambar_spektrogram(x: np.ndarray, sr: int, path, judul: str) -> None:
+SKALA_SPEKTROGRAM_DB = (-150, -40)
+
+
+def gambar_spektrogram(x: np.ndarray, sr: int, path, judul: str, gain_db: float = 0) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(10, 3.2), dpi=110)
-    ax.specgram(x, NFFT=2048, Fs=sr, noverlap=1024, cmap="magma", vmin=-150, vmax=-40)
-    ax.set_ylim(0, min(8500, sr / 2))
+    durasi = len(x) / sr
+    lebar = 10 if durasi <= 30 else min(30, max(16, durasi / 3))
+    fig, ax = plt.subplots(figsize=(lebar, 3.2), dpi=110)
+    _, _, _, gambar = ax.specgram(x / 10 ** (gain_db / 20), NFFT=2048, Fs=sr,
+                                  noverlap=1024, cmap="magma",
+                                  vmin=SKALA_SPEKTROGRAM_DB[0], vmax=SKALA_SPEKTROGRAM_DB[1])
+    fig.colorbar(gambar, ax=ax, label="Level (dB)")
+    ax.set_ylim(0, min(12000, sr / 2))
     for f in pipeline.PITA_KATAK:
         ax.axhline(f, color="#7CFC9A", lw=0.8, ls="--")
     ax.set_xlabel("detik")
@@ -40,7 +48,9 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
     hasil = pipeline.jalankan(x, sr)
     simpan_wav(folder / "terfilter.wav", hasil.audio, hasil.sr)
     gambar_spektrogram(x, sr, folder / "sebelum.png", "Sebelum penyaringan")
-    gambar_spektrogram(hasil.audio, hasil.sr, folder / "sesudah.png", "Sesudah penyaringan (pita katak 2,4–3,8 kHz bergaris)")
+    gambar_spektrogram(hasil.audio, hasil.sr, folder / "sesudah.png",
+                      "Sesudah penyaringan, sebelum normalisasi (pita katak 2,4–3,8 kHz bergaris)",
+                      gain_db=hasil.gain_db)
     segmen = deteksi.segmen_aktif(hasil.audio, hasil.sr)
 
     jendela, catatan_perch = [], None
