@@ -214,13 +214,14 @@ class Pola:
             raise InputTidakValid("Panjang kotak templat harus 0,05–10 detik.")
         if mulai_s < 0 or f_min < 0 or f_maks > F_MAKS_TAMPIL or f_maks - f_min < 100:
             raise InputTidakValid("Rentang frekuensi templat harus 0–12.000 Hz dan selebar minimal 100 Hz.")
+        f_min, f_maks = round(f_min), round(f_maks)
         patch = ambil_patch(path_wav, mulai_s, akhir_s, f_min, f_maks)
         tid = uuid.uuid4().hex[:12]
         with _lock, self._db() as db:
             db.execute(
                 "INSERT INTO templat VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (tid, (nama or "").strip() or spesies, spesies, rekaman_id, nama_file, round(mulai_s, 3),
-                 round(akhir_s, 3), round(f_min), round(f_maks), patch.astype(np.float32).tobytes(),
+                 round(akhir_s, 3), f_min, f_maks, patch.astype(np.float32).tobytes(),
                  patch.shape[0], patch.shape[1], time.time()),
             )
         return self.templat(tid)
