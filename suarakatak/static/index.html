@@ -19,6 +19,8 @@
   </div>
   <nav>
     <button class="tab aktif" data-tab="analisis">Analisis</button>
+    <button class="tab" data-tab="pola">Pola &amp; validasi</button>
+    <button class="tab" data-tab="soundscape">Soundscape</button>
     <button class="tab" data-tab="model">Model &amp; label</button>
     <button class="tab" data-tab="panduan">Panduan</button>
   </nav>
@@ -58,6 +60,39 @@
     </div>
   </section>
 
+  <section id="tab-pola" hidden>
+    <div class="kartu">
+      <h2>Pencocokan pola (gaya Arbimon)</h2>
+      <p class="muted">Buat templat di tab Analisis: buka rekaman, seret kotak di sekitar satu panggilan pada spektrogram suara yang dibersihkan, beri nama jenis. Di sini templat dicari ke rekaman lain (korelasi spektrogram). Hasilnya hanya <strong>kandidat</strong>: dengarkan, lalu tandai <em>Hadir</em> atau <em>Tidak</em>. Hanya kandidat yang Anda tandai Hadir dihitung sebagai kehadiran.</p>
+      <div id="daftar-templat" class="grid-templat"></div>
+    </div>
+    <div class="kartu" id="panel-templat" hidden></div>
+    <div class="kartu">
+      <h2>Ringkasan kehadiran per situs</h2>
+      <div class="baris">
+        <label for="pilih-spesies">Jenis</label>
+        <select id="pilih-spesies"></select>
+        <a class="tombol" id="unduh-matriks" href="#">Unduh matriks deteksi (CSV)</a>
+        <a class="tombol" href="/api/cocok.csv">Unduh semua kandidat (CSV)</a>
+      </div>
+      <div id="ringkasan-hadir"></div>
+    </div>
+  </section>
+
+  <section id="tab-soundscape" hidden>
+    <div class="kartu">
+      <h2>Soundscape</h2>
+      <p class="muted">Setiap rekaman asli dipotong per 60 detik; untuk tiap potongan dicatat frekuensi yang menonjol (≥6 dB di atas sekitarnya, bin 86 Hz). Warna = proporsi potongan pada jam itu yang punya puncak di frekuensi tersebut. Ini gambaran komposisi suara (katak, serangga, mesin), <strong>bukan identifikasi jenis</strong>. Garis putus-putus = pita katak 2,4–3,8 kHz.</p>
+      <div class="baris">
+        <label for="pilih-situs-ss">Situs</label>
+        <select id="pilih-situs-ss"></select>
+        <button class="tombol utama" id="tombol-soundscape">Tampilkan</button>
+      </div>
+      <p id="info-soundscape" class="muted" role="status"></p>
+      <img id="gambar-soundscape" class="spek" alt="Soundscape" hidden>
+    </div>
+  </section>
+
   <section id="tab-model" hidden>
     <div class="kartu">
       <h2>Model dari label Anda</h2>
@@ -83,6 +118,14 @@
         <li><strong>Latih model</strong> di tab Model &amp; label. Siapkan sedikitnya dua kelompok berbeda, dan tambahkan banyak contoh untuk tiap kelompok.</li>
       </ol>
       <p>Semua tebakan belum diverifikasi. Persentase tinggi bukan bukti bahwa jenisnya benar. Minta ahli memeriksa hasil sebelum mengambil kesimpulan.</p>
+      <h2>Alur gaya Arbimon</h2>
+      <ol>
+        <li><strong>Templat</strong>: di tab Analisis, seret kotak waktu × frekuensi di sekitar satu panggilan yang jenisnya sudah Anda yakini, lalu simpan dengan nama jenis.</li>
+        <li><strong>Pencocokan pola</strong>: di tab Pola &amp; validasi, cari templat ke semua rekaman atau satu situs PAR. Skor 0–1 adalah korelasi spektrogram; makin tinggi makin mirip bentuknya, bukan peluang jenis itu benar.</li>
+        <li><strong>Validasi</strong>: dengarkan tiap kandidat dan tandai Hadir atau Tidak. Kandidat yang belum ditandai tetap “belum divalidasi”.</li>
+        <li><strong>Ringkasan</strong>: matriks situs × tanggal dan situs × jam hanya menghitung Hadir yang divalidasi. Kode CSV: 1 hadir, 0 dicari tanpa kandidat tersisa, ? belum divalidasi, NA tidak dicari.</li>
+        <li><strong>Soundscape</strong>: peta frekuensi menonjol per jam untuk melihat kapan pita katak ramai, terpisah dari identifikasi jenis.</li>
+      </ol>
       <h2>Detail teknis</h2>
       <ol>
         <li><strong>Penyaringan tervalidasi</strong>: highpass 2.100 Hz ×2, lowpass 8.000 Hz ×2, deteksi puncak nada sempit via FFT rata-rata per file di luar pita katak 2,4–3,8 kHz, notch bertingkat (−40..−50 dB, 3 lebar), normalisasi puncak ke −2 dBFS, keluaran 48 kHz PCM 16-bit. Tidak memakai afftdn/anlmdn, spectral subtraction, bandreject statis atau loudnorm.</li>
