@@ -52,6 +52,20 @@ def test_cari_cocok_lintas_blok(tmp_path, monkeypatch):
     monkeypatch.setattr(pola, "BLOK_S", 7.0)
     blok = pola.cari_cocok(path, patch, 2700, 3200, 0.5, 50)
     assert [m for m, _ in blok] == pytest.approx([m for m, _ in penuh], abs=0.01)
+    for detik in (1.3, 2.1, 3.7):
+        monkeypatch.setattr(pola, "BLOK_S", detik)
+        hasil = pola.cari_cocok(path, patch, 2700, 3200, 0.5, 50)
+        assert [m for m, _ in hasil] == pytest.approx([m for m, _ in penuh], abs=0.01)
+
+
+def test_templat_frekuensi_pecahan_tetap_bisa_dicari(tmp_path):
+    h = pipeline.jalankan(contoh.buat(), contoh.SR)
+    path = tmp_path / "t.wav"
+    simpan_wav(path, h.audio, h.sr)
+    p = pola.Pola(tmp_path / "db.sqlite")
+    t = p.buat_templat("r1", "t.wav", path, 1.98, 2.75, 2343.6, 3200.4, "Litoria sp.")
+    assert (t["f_min"], t["f_maks"]) == (2344, 3200)
+    assert pola.cari_cocok(path, p.patch(t["id"]), t["f_min"], t["f_maks"], 0.5, 50)
 
 
 def test_soundscape_puncak_dan_agregasi():
