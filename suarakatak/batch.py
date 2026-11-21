@@ -72,8 +72,10 @@ def main(argv=None) -> int:
             par = info.par or path.parent.name
             tanggal = info.waktu.strftime("%Y-%m-%d")
             tujuan = args.keluaran / par / tanggal / (path.stem + ".WAV")
-            if tujuan.exists():
+            emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
+            if tujuan.exists() and (not args.perch or emb_path.exists()):
                 continue
+            sementara = tujuan.with_name(path.stem + ".part.WAV")
             tujuan.parent.mkdir(parents=True, exist_ok=True)
             config = next((p for p in path.parents if (p / "CONFIG.TXT").exists()), None)
             if config and not (tujuan.parent / "CONFIG.TXT").exists():
@@ -82,7 +84,7 @@ def main(argv=None) -> int:
             try:
                 x, sr = muat_audio(path)
                 h = pipeline.jalankan(x, sr)
-                simpan_wav(tujuan, h.audio, h.sr)
+                simpan_wav(sementara, h.audio, h.sr)
                 seg = deteksi.segmen_aktif(h.audio, h.sr)
                 akt = deteksi.ringkas_aktivitas(seg, len(x) / sr)
                 ks, kd, kj = "katak (2400–3800 Hz)", "dengung (900–1900 Hz)", "jangkrik (4300–6600 Hz)"
@@ -104,7 +106,6 @@ def main(argv=None) -> int:
                     jendela = perch.analisis(x, sr)
                     agg = np.max(np.stack([j.logit for j in jendela]), axis=0)
                     baris["perch_amfibi_teratas"] = perch.teratas(agg, 1)[0]["label"]
-                    emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
                     emb_path.parent.mkdir(parents=True, exist_ok=True)
                     np.savez_compressed(
                         emb_path,
@@ -113,9 +114,11 @@ def main(argv=None) -> int:
                     )
             except Exception as e:
                 baris["status"] = f"gagal: {e}"
-                tujuan.unlink(missing_ok=True)
+                sementara.unlink(missing_ok=True)
             w.writerow(baris)
             fcsv.flush()
+            if baris["status"] == "ok":
+                sementara.replace(tujuan)
             n += 1
             print(f"[{n}] {par}/{path.name} {baris['status']}", file=sys.stderr)
             if args.batas and n >= args.batas:
