@@ -11,7 +11,7 @@ let infoModel = {};
 function peringatanModel() {
   const jumlah = Object.values(jumlahLabel);
   if (jumlah.length < 2 || jumlah.some((n) => n < 10) || infoModel.data_kecil) {
-    return 'Hasil belum dapat diandalkan. Tambahkan sedikitnya 10 label yang sudah diperiksa untuk setiap kelompok. Jika hasil belum diuji dengan contoh lain, ketepatannya belum diketahui. Semua tebakan tetap perlu diperiksa ahli.';
+    return 'Hasil belum dapat diandalkan. Tambahkan sedikitnya 10 label yang sudah diperiksa untuk setiap kelompok, diambil dari sedikitnya 3 rekaman berbeda. Jika hasil belum diuji dengan contoh lain, ketepatannya belum diketahui. Semua tebakan tetap perlu diperiksa ahli.';
   }
   return infoModel.siap && !infoModel.usang && infoModel.akurasi_cv != null
     ? 'Semua tebakan belum diverifikasi. Persentase tinggi bukan bukti bahwa jenisnya benar; mintalah pemeriksaan ahli.'
