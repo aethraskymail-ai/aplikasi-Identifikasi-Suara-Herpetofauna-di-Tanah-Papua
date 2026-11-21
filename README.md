@@ -32,6 +32,16 @@ tervalidasi, mendeteksi aktivitas di pita katak 2,4–3,8 kHz, lalu mengenali su
    muncul bila tiap kelas punya ≥ 2 contoh. Setelah itu kolom *Model kustom* terisi untuk setiap
    rekaman. Label bisa diekspor ke CSV.
 
+## Analisis gaya Arbimon
+
+Mengikuti alur Arbimon (Rainforest Connection), terpisah dari jalur Perch:
+
+1. **Templat**: di tab Analisis, seret kotak waktu × frekuensi di sekitar satu panggilan pada spektrogram suara yang dibersihkan, beri nama jenis.
+2. **Pencocokan pola** (tab *Pola & validasi*): spektrogram dB templat digeser sepanjang tiap rekaman (semua atau satu situs PAR); skor = korelasi Pearson 0–1. Hasilnya **kandidat**, bukan identifikasi.
+3. **Validasi manual**: dengarkan tiap kandidat, tandai *Hadir* / *Tidak*. Mencari ulang hanya mengganti kandidat yang belum divalidasi.
+4. **Ringkasan**: matriks situs × tanggal dan situs × jam, okupansi naif, dan `matriks_deteksi_<jenis>.csv` (1 hadir tervalidasi, 0 dicari tanpa kandidat tersisa, ? belum divalidasi, NA tidak dicari). Hanya *Hadir* yang divalidasi dihitung.
+5. **Soundscape**: puncak spektrum menonjol (≥6 dB, bin 86 Hz) per potongan 60 detik, diagregasi per jam WIT (atau jam sejak awal rekaman untuk rekaman harian tanpa jam mulai). Gambaran komposisi suara, bukan identifikasi jenis.
+
 ## Menjalankan di komputer sendiri (Mac/Windows/Linux)
 
 ```bash
