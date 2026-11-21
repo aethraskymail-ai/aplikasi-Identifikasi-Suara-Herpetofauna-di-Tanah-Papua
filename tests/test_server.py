@@ -71,6 +71,15 @@ def test_8khz_pita_tidak_terukur(client):
         assert levels["katak (2400–3800 Hz)"]["mean_db"] is not None
 
 
+def test_rekaman_harian(client):
+    response = upload(client, wav(), "PAR002_2026-05-06.mp3")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["audiomoth"] == {"par": "PAR002", "tanggal": "2026-05-06", "waktu": None,
+                                 "dalam_jendela_1730_2100": None}
+    assert "jam mulai tidak diketahui" in data["peringatan"][0]
+
+
 def test_error_tak_terduga_tidak_bocor(client, monkeypatch, caplog):
     def gagal(path, folder, rid, nama, perch_terfilter, path_relatif="", mode_rendah=False):
         server.db.simpan_rekaman(rid, nama, {}, [])
