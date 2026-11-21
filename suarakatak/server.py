@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import os
 import re
 import shutil
@@ -18,13 +19,14 @@ from pydantic import BaseModel
 
 from . import __version__, contoh, perch
 from .analisis import analisis_file
-from .audio import simpan_wav
+from .audio import AudioTidakValid, simpan_wav
 from .klasifikasi import Penyimpanan
 
 DATA_DIR = Path(os.environ.get("SUARAKATAK_DATA", Path.home() / ".suarakatak")).expanduser()
 FOLDER_REKAMAN = DATA_DIR / "rekaman"
 STATIC = Path(__file__).parent / "static"
 EKSTENSI = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"}
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Identifikasi Suara Herpetofauna Tanah Papua", version=__version__)
 db = Penyimpanan(DATA_DIR / "suarakatak.sqlite")
@@ -37,8 +39,10 @@ def _folder(rid: str) -> Path:
 
 
 def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool,
-            mode_rendah: bool = False) -> dict:
-    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter, mode_rendah)
+            path_relatif: str = "", mode_rendah: bool = False) -> dict:
+    ringkasan, jendela = analisis_file(
+        path_asli, folder, nama, perch_terfilter=perch_terfilter,
+        nama_metadata=path_relatif.replace("\\", "/"), mode_rendah=mode_rendah)
     ringkasan["id"] = rid
     ringkasan["file_asli"] = path_asli.name
     db.simpan_rekaman(rid, nama, ringkasan, jendela)
@@ -59,22 +63,32 @@ def status() -> dict:
 
 @app.post("/api/analisis")
 def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False),
-             mode_rendah: bool = Form(False)) -> dict:
+             path_relatif: str = Form(""), mode_rendah: bool = Form(False)) -> dict:
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
-        raise HTTPException(400, f"Format {ext or '?'} belum didukung. Pakai WAV/FLAC/MP3/M4A/OGG.")
+        raise HTTPException(400, "Jenis file ini belum didukung. Coba file WAV, FLAC, MP3, M4A, atau OGG.")
     rid = uuid.uuid4().hex[:12]
     folder = FOLDER_REKAMAN / rid
-    folder.mkdir(parents=True)
     path_asli = folder / f"asli{ext}"
-    with open(path_asli, "wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
-        return _proses(path_asli, folder, rid, nama, perch_terfilter, mode_rendah)
+        folder.mkdir(parents=True)
+        with open(path_asli, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        if not path_asli.stat().st_size:
+            raise AudioTidakValid("File kosong. Coba salin ulang dari kartu AudioMoth.")
+        return _proses(path_asli, folder, rid, nama, perch_terfilter=perch_terfilter,
+                       path_relatif=path_relatif, mode_rendah=mode_rendah)
     except Exception as e:
+        logger.exception("Analisis unggahan gagal: %s", rid)
+        try:
+            db.hapus_rekaman(rid)
+        except Exception:
+            logger.exception("Pembersihan basis data gagal: %s", rid)
         shutil.rmtree(folder, ignore_errors=True)
-        raise HTTPException(422, f"Gagal menganalisis {nama}: {e}") from e
+        if isinstance(e, AudioTidakValid):
+            raise HTTPException(422, f"{nama}: {e} Coba file WAV lain.") from e
+        raise HTTPException(500, "Analisis gagal karena gangguan server. Coba lagi nanti atau gunakan rekaman lain.") from e
 
 
 @app.post("/api/contoh")
