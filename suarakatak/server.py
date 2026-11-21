@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import logging
 import os
 import re
 import shutil
@@ -17,13 +19,14 @@ from pydantic import BaseModel
 
 from . import __version__, contoh, perch
 from .analisis import analisis_file
-from .audio import simpan_wav
+from .audio import AudioTidakValid, simpan_wav
 from .klasifikasi import Penyimpanan
 
 DATA_DIR = Path(os.environ.get("SUARAKATAK_DATA", Path.home() / ".suarakatak")).expanduser()
 FOLDER_REKAMAN = DATA_DIR / "rekaman"
 STATIC = Path(__file__).parent / "static"
 EKSTENSI = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"}
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Identifikasi Suara Herpetofauna Tanah Papua", version=__version__)
 db = Penyimpanan(DATA_DIR / "suarakatak.sqlite")
@@ -35,8 +38,8 @@ def _folder(rid: str) -> Path:
     return FOLDER_REKAMAN / rid
 
 
-def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool) -> dict:
-    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter)
+def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool, path_relatif: str = "") -> dict:
+    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter, path_relatif.replace("\\", "/"))
     ringkasan["id"] = rid
     ringkasan["file_asli"] = path_asli.name
     db.simpan_rekaman(rid, nama, ringkasan, jendela)
@@ -51,26 +54,36 @@ def status() -> dict:
         "perch_model": perch.HANDLE,
         "jumlah_label_amfibi_perch": len(perch.label_amfibi()),
         "label": db.statistik_label(),
+        "model": db.info_model(),
     }
 
 
 @app.post("/api/analisis")
-def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) -> dict:
+def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), path_relatif: str = Form("")) -> dict:
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
         raise HTTPException(400, f"Format {ext or '?'} belum didukung. Pakai WAV/FLAC/MP3/M4A/OGG.")
     rid = uuid.uuid4().hex[:12]
     folder = FOLDER_REKAMAN / rid
-    folder.mkdir(parents=True)
     path_asli = folder / f"asli{ext}"
-    with open(path_asli, "wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
-        return _proses(path_asli, folder, rid, nama, perch_terfilter)
+        folder.mkdir(parents=True)
+        with open(path_asli, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        if not path_asli.stat().st_size:
+            raise AudioTidakValid("File kosong. Coba salin ulang dari kartu AudioMoth.")
+        return _proses(path_asli, folder, rid, nama, perch_terfilter, path_relatif)
     except Exception as e:
+        logger.exception("Analisis unggahan gagal: %s", rid)
+        try:
+            db.hapus_rekaman(rid)
+        except Exception:
+            logger.exception("Pembersihan basis data gagal: %s", rid)
         shutil.rmtree(folder, ignore_errors=True)
-        raise HTTPException(422, f"Gagal menganalisis {nama}: {e}") from e
+        if isinstance(e, AudioTidakValid):
+            raise HTTPException(422, f"{nama}: {e}") from e
+        raise HTTPException(500, "Analisis gagal karena gangguan server. Coba lagi nanti atau gunakan rekaman lain.") from e
 
 
 @app.post("/api/contoh")
@@ -96,7 +109,9 @@ def detail(rid: str) -> dict:
     prediksi = db.prediksi(db.embedding_rekaman(rid)) if data.get("jendela") else []
     for j, p in zip(data.get("jendela", []), prediksi):
         j["model_kustom"] = p
+        j["data_latih"] = db.data_latih_model(rid, j["idx"])
     data["model_kustom_aktif"] = db.model() is not None
+    data["model"] = db.info_model()
     return data
 
 
@@ -162,6 +177,31 @@ def ekspor_label():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=label_suara_katak.csv"},
     )
+
+
+@app.get("/api/prediksi.csv")
+def ekspor_prediksi():
+    buf = io.StringIO()
+    fields = ["nama_file", "folder_PAR", "waktu_WIT", "mulai_s", "akhir_s", "label_manual",
+              "tebakan_kustom_belum_terverifikasi", "skor_model_tidak_terkalibrasi", "data_latih",
+              "model_dilatih_pada", "model_jumlah_label", "model_kelas", "label_berubah",
+              "perch_pembanding_tebakan_belum_terverifikasi", "perch_skor_pembanding"]
+    w = csv.DictWriter(buf, fieldnames=fields)
+    w.writeheader()
+    for r in db.daftar_rekaman():
+        d = detail(r["id"])
+        info = d["model"]
+        am = d.get("audiomoth", {})
+        for j in d.get("jendela", []):
+            custom = next(iter(j.get("model_kustom", [])), {})
+            perch_top = next(iter(j.get("perch_umum", [])), {})
+            w.writerow(dict(zip(fields, [d["nama_file"], am.get("par"), am.get("waktu"),
+                j["mulai_s"], j["akhir_s"], j.get("label"), custom.get("label"), custom.get("skor"),
+                j.get("data_latih", False), info.get("dilatih_pada"), info.get("n"),
+                json.dumps(info.get("kelas", {}), ensure_ascii=False), info["usang"],
+                perch_top.get("label"), perch_top.get("skor")])))
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=tebakan_belum_terverifikasi.csv"})
 
 
 @app.get("/")

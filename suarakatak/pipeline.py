@@ -133,19 +133,22 @@ def normalisasi_puncak(x: np.ndarray, target_db: float = TARGET_PUNCAK_DB) -> tu
     return (x * 10 ** (gain / 20)).astype(np.float32), round(gain, 2)
 
 
-def level_pita(x: np.ndarray, sr: int, pita: tuple[float, float]) -> dict[str, float]:
+def level_pita(x: np.ndarray, sr: int, pita: tuple[float, float]) -> dict[str, float | bool | None]:
     """Level rata-rata (RMS) dan puncak di satu pita, dengan bandpass FFT tajam.
 
     Bandpass biquad seperti `bandpass` ffmpeg terlalu landai: dengung yang lebih keras dari katak
     bocor ke pengukuran pita katak. Masker FFT memberi angka per pita yang tidak saling bocor.
     """
     lo, hi = pita
+    if hi > sr / 2:
+        return {"mean_db": None, "max_db": None}
     spek = np.fft.rfft(x)
     f = np.fft.rfftfreq(len(x), 1 / sr)
     spek[(f < lo) | (f > hi)] = 0
     y = np.fft.irfft(spek, n=len(x))
     rms = np.sqrt(np.mean(y**2) + 1e-20)
-    return {"mean_db": round(float(20 * np.log10(rms)), 1), "max_db": round(max_volume_db(y), 1)}
+    mean_db = float(20 * np.log10(rms))
+    return {"mean_db": round(mean_db, 1), "max_db": round(max_volume_db(y), 1), "senyap": mean_db <= -150}
 
 
 @dataclass
@@ -169,6 +172,7 @@ class HasilSaring:
 def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
     from .audio import resample
 
+    sr_asli = sr
     if sr != SR_KELUARAN:
         x = resample(x, sr, SR_KELUARAN)
         sr = SR_KELUARAN
@@ -177,6 +181,10 @@ def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
     puncak = cari_puncak_gangguan(y, sr)
     y = notch_bertingkat(y, sr, puncak)
     sesudah_mentah = {nama: level_pita(y, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
+    for nama, (_, hi) in PITA_VERIFIKASI.items():
+        if hi > sr_asli / 2:
+            sebelum[nama] = {"mean_db": None, "max_db": None}
+            sesudah_mentah[nama] = {"mean_db": None, "max_db": None}
     y, gain = normalisasi_puncak(y)
     # Level sesudah dilaporkan sebelum normalisasi agar bisa dibandingkan langsung dengan level asal.
     return HasilSaring(y, sr, puncak, gain, sebelum, sesudah_mentah)

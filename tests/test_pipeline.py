@@ -1,7 +1,96 @@
 import numpy as np
+import pytest
 
 from suarakatak import contoh, deteksi, pipeline
 from suarakatak.audio import info_nama_file
+from suarakatak.klasifikasi import Penyimpanan
+from types import SimpleNamespace
+import csv
+import io
+
+
+def penyimpanan(tmp_path, recordings=1):
+    db = Penyimpanan(tmp_path / "test.sqlite")
+    for r in range(recordings):
+        rid = f"{r:012x}"
+        windows = [SimpleNamespace(mulai_s=i*5, akhir_s=(i+1)*5,
+                   embedding=np.array([i % 2, r, i], dtype=np.float32)) for i in range(4)]
+        summary = {"nama_file": "PAR001/test.wav", "audiomoth": {"par": "PAR001", "waktu": "2026-01-01"},
+                   "jendela": [{"idx": i, "mulai_s": i*5, "akhir_s": (i+1)*5,
+                                "perch_umum": [{"label": "pembanding", "skor": .5}]} for i in range(4)]}
+        db.simpan_rekaman(rid, summary["nama_file"], summary, windows)
+        for i in range(4):
+            db.beri_label(rid, i, "katak" if i % 2 else "bukan katak")
+    return db
+
+
+def test_prediksi_tidak_melatih_dan_model_persisten(tmp_path, monkeypatch):
+    db = penyimpanan(tmp_path)
+    monkeypatch.setattr(db, "latih", lambda: (_ for _ in ()).throw(AssertionError("auto-training")))
+    assert db.prediksi(db.embedding_rekaman("000000000000")) == [[], [], [], []]
+    assert not db.info_model()["siap"]
+    monkeypatch.undo()
+    info = db.latih()
+    assert info["akurasi_cv"] is None
+    assert "antarrekaman" in info["pesan"] and info["data_kecil"]
+    restored = Penyimpanan(db.path)
+    assert restored.info_model()["dilatih_pada"] == info["dilatih_pada"]
+    assert restored.prediksi(np.zeros((0, 3))) == []
+    assert restored.prediksi(db.embedding_rekaman("000000000000"))
+
+
+def test_label_berubah_dan_keanggotaan_latih(tmp_path):
+    db = penyimpanan(tmp_path)
+    db.latih()
+    assert not db.info_model()["usang"]
+    db.beri_label("000000000000", 0, "baru")
+    assert db.info_model()["usang"]
+    assert db.data_latih_model("000000000000", 0)
+    db.beri_label("000000000000", 0, "bukan katak")
+    assert not db.info_model()["usang"]
+    db.beri_label("000000000000", 0, None)
+    assert db.info_model()["usang"]
+    db.beri_label("000000000000", 0, "bukan katak")
+    db.hapus_rekaman("000000000000")
+    assert db.info_model()["usang"]
+    assert db.latih()["siap"] is False
+    assert db.model() is not None  # gagal melatih tidak mengganti model terakhir
+
+
+def test_cv_dikelompokkan_per_rekaman(tmp_path, monkeypatch):
+    db = penyimpanan(tmp_path, recordings=3)
+    import sklearn.model_selection
+    def check(model, x, y, cv):
+        _, _, meta = db.data_latih()
+        for train, test in cv:
+            assert {meta[i]["rekaman_id"] for i in train}.isdisjoint(
+                {meta[i]["rekaman_id"] for i in test})
+        return np.array([.5] * len(cv))
+    monkeypatch.setattr(sklearn.model_selection, "cross_val_score", check)
+    assert db.latih()["akurasi_cv"] == .5
+
+
+def test_prediksi_csv_endpoint(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from suarakatak import server
+    db = penyimpanan(tmp_path)
+    monkeypatch.setattr(server, "db", db)
+    client = TestClient(server.app)
+    rows = list(csv.DictReader(io.StringIO(client.get("/api/prediksi.csv").text)))
+    assert len(rows) == 4 and rows[0]["tebakan_kustom_belum_terverifikasi"] == ""
+    db.latih()
+    response = client.get("/api/prediksi.csv")
+    assert response.status_code == 200
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert rows[0]["data_latih"] == "True"
+    assert rows[0]["model_jumlah_label"] == "4"
+    assert rows[0]["model_dilatih_pada"]
+    assert rows[0]["folder_PAR"] == "PAR001"
+    assert rows[0]["perch_pembanding_tebakan_belum_terverifikasi"] == "pembanding"
+    assert rows[0]["tebakan_kustom_belum_terverifikasi"]
+    assert client.get("/api/rekaman/tidak-ada").status_code == 404
+    db.hapus_rekaman("000000000000")
+    assert list(csv.DictReader(io.StringIO(client.get("/api/prediksi.csv").text))) == []
 
 
 def test_nama_file_audiomoth():
@@ -44,6 +133,21 @@ def test_equalizer_notch_tepat_di_frekuensi():
     assert pipeline.max_volume_db(y[sr // 2 :]) < -60
 
 
+@pytest.mark.parametrize("amplitudo,senyap", [(0, True), (1e-8, True), (0.1, False)])
+def test_level_pita_senyap_tetap_numerik(amplitudo, senyap):
+    sr = 48000
+    t = np.arange(sr) / sr
+    level = pipeline.level_pita(amplitudo * np.sin(2 * np.pi * 3000 * t), sr, pipeline.PITA_KATAK)
+    assert level["senyap"] is senyap
+    assert np.isfinite(level["mean_db"])
+    assert np.isfinite(level["max_db"])
+
+
+def test_pita_tidak_terukur_bukan_senyap():
+    level = pipeline.level_pita(np.zeros(8000), 8000, (4300, 6600))
+    assert level == {"mean_db": None, "max_db": None}
+
+
 def test_notch_dekat_tepi_tidak_memotong_pita_katak():
     from suarakatak.pipeline import level_pita
 
@@ -62,3 +166,13 @@ def test_rekaman_44100_dikeluarkan_48000():
 
     h = pipeline.jalankan(resample(x, 48000, 44100), 44100)
     assert h.sr == 48000
+
+
+def test_rekaman_8khz_keluaran_48khz_tidak_menambah_pita_terukur():
+    sr = 8000
+    t = np.arange(sr) / sr
+    h = pipeline.jalankan((0.1 * np.sin(2 * np.pi * 3000 * t)).astype(np.float32), sr)
+    assert h.sr == 48000
+    for level in (h.level_sebelum, h.level_sesudah):
+        assert level["jangkrik (4300–6600 Hz)"] == {"mean_db": None, "max_db": None}
+        assert level["katak (2400–3800 Hz)"]["mean_db"] is not None
