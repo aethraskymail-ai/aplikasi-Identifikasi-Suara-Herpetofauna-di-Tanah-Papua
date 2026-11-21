@@ -42,3 +42,23 @@ def test_equalizer_notch_tepat_di_frekuensi():
     x = np.sin(2 * np.pi * 1500 * t).astype(np.float32)
     y = pipeline.notch_bertingkat(x, sr, [pipeline.Puncak(1500.0, 30, -10)])
     assert pipeline.max_volume_db(y[sr // 2 :]) < -60
+
+
+def test_notch_dekat_tepi_tidak_memotong_pita_katak():
+    from suarakatak.pipeline import level_pita
+
+    sr = 48000
+    t = np.arange(sr * 4) / sr
+    x = (0.3 * np.sin(2 * np.pi * 3900 * t) + 0.05 * np.sin(2 * np.pi * 3780 * t)).astype(np.float32)
+    puncak = pipeline.cari_puncak_gangguan(x, sr)
+    y = pipeline.notch_bertingkat(x, sr, puncak)
+    pita = (3760.0, 3800.0)
+    assert abs(level_pita(y, sr, pita)["mean_db"] - level_pita(x, sr, pita)["mean_db"]) < 1.5
+
+
+def test_rekaman_44100_dikeluarkan_48000():
+    x = contoh.buat(durasi_s=3.0)
+    from suarakatak.audio import resample
+
+    h = pipeline.jalankan(resample(x, 48000, 44100), 44100)
+    assert h.sr == 48000
