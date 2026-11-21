@@ -38,8 +38,11 @@ def _folder(rid: str) -> Path:
     return FOLDER_REKAMAN / rid
 
 
-def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool, path_relatif: str = "") -> dict:
-    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter, path_relatif.replace("\\", "/"))
+def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool,
+            path_relatif: str = "", mode_rendah: bool = False) -> dict:
+    ringkasan, jendela = analisis_file(
+        path_asli, folder, nama, perch_terfilter=perch_terfilter,
+        nama_metadata=path_relatif.replace("\\", "/"), mode_rendah=mode_rendah)
     ringkasan["id"] = rid
     ringkasan["file_asli"] = path_asli.name
     db.simpan_rekaman(rid, nama, ringkasan, jendela)
@@ -59,7 +62,8 @@ def status() -> dict:
 
 
 @app.post("/api/analisis")
-def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), path_relatif: str = Form("")) -> dict:
+def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False),
+             path_relatif: str = Form(""), mode_rendah: bool = Form(False)) -> dict:
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
@@ -73,7 +77,8 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False), 
             shutil.copyfileobj(file.file, f)
         if not path_asli.stat().st_size:
             raise AudioTidakValid("File kosong. Coba salin ulang dari kartu AudioMoth.")
-        return _proses(path_asli, folder, rid, nama, perch_terfilter, path_relatif)
+        return _proses(path_asli, folder, rid, nama, perch_terfilter=perch_terfilter,
+                       path_relatif=path_relatif, mode_rendah=mode_rendah)
     except Exception as e:
         logger.exception("Analisis unggahan gagal: %s", rid)
         try:

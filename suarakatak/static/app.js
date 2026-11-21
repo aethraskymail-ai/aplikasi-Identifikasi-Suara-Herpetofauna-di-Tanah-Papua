@@ -120,6 +120,7 @@ async function buka(id) {
       : '<span class="status-warn">di luar jendela 17:30–21:00</span>';
   const puncak = d.penyaringan.puncak_dinotch;
   const adaMulai = d.jendela.length > 0;
+  const pita = d.mode_rendah ? "0,5–3,8 kHz" : "2,4–3,8 kHz";
   const namaAsli = d.nama_file.split(/[\\/]/).pop().replace(/ \([^)]*\)$/, "");
   const namaDibersihkan = namaAsli.replace(/\.[^.]+$/, "") + "-dibersihkan.wav";
   $("#detail").innerHTML = `
@@ -131,10 +132,11 @@ async function buka(id) {
     <div class="info">
       <span><b>Durasi</b> ${fmt(d.durasi_s)} dtk</span>
       <span><b>Sample rate</b> ${d.sample_rate_asli} Hz</span>
+      <span><b>Mode</b> ${d.mode_rendah ? "Frekuensi rendah · highpass 400 Hz · bukan metode tervalidasi" : "Standar · highpass 2100 Hz"}</span>
       ${am.waktu ? `<span><b>Waktu</b> ${esc(am.waktu)} WIT</span>` : ""}
       ${am.par ? `<span><b>Lokasi</b> ${esc(am.par)}</span>` : ""}
       <span>${jendela}</span>
-      <span><b>Aktivitas pita katak</b> ${fmt(d.aktivitas.detik_aktif)} dtk (${fmt(d.aktivitas.persen_aktif)}%), ${d.aktivitas.jumlah_segmen} segmen</span>
+      <span><b>Aktivitas pita ${pita}</b> ${fmt(d.aktivitas.detik_aktif)} dtk (${fmt(d.aktivitas.persen_aktif)}%), ${d.aktivitas.jumlah_segmen} segmen</span>
     </div>
     <div class="dua">
       <div><div class="muted">Asli</div><audio id="audio-asli" controls preload="metadata" src="/api/rekaman/${id}/audio/asli"></audio>
@@ -151,17 +153,17 @@ async function buka(id) {
     <div id="status-model-detail">${statusModel(d.model)}</div>
     ${d.catatan_perch ? '<p class="status-warn">Tebakan Perch belum tersedia. Anda tetap bisa mendengarkan dan mengunduh rekaman. Coba lagi nanti untuk memberi label dan melatih model.</p>' : ""}
     ${adaMulai ? `<p class="peringatan" id="peringatan-prediksi">${peringatanModel()}</p>
-    <p class="muted">Perch hanya memberi tebakan pembanding, bukan kepastian jenis katak Papua. ${d.model_kustom_aktif ? "Model Anda belajar dari label yang Anda berikan." : "Beri label sedikitnya dua kelompok berbeda, lalu pilih Latih model di tab Model &amp; label."}</p>
+    <p class="muted">Perch hanya memberi tebakan pembanding, bukan kepastian jenis katak Papua; skor relatif terhadap kumpulan kelas masing-masing kolom, bukan probabilitas keberadaan. ${d.model_kustom_aktif ? "Model Anda belajar dari label yang Anda berikan." : "Beri label sedikitnya dua kelompok berbeda, lalu pilih Latih model di tab Model &amp; label."}</p>
     <div class="gulir wadah-jendela"><table class="tabel" id="tabel-jendela"><thead><tr>
-      <th>Waktu</th><th>Aktivitas suara</th><th>Tebakan model Anda (belum diverifikasi)</th><th>Tebakan Perch (belum diverifikasi)</th><th>Tebakan Perch lainnya (belum diverifikasi)</th><th>Label Anda</th></tr></thead><tbody>
+      <th>Waktu</th><th>Aktivitas suara ${pita}</th><th>Tebakan model Anda (belum diverifikasi)</th><th>Tebakan Perch: amfibi saja (belum diverifikasi)</th><th>Tebakan Perch: semua kelas (belum diverifikasi)</th><th>Label Anda</th></tr></thead><tbody>
       ${d.jendela
         .map(
           (j) => `<tr data-idx="${j.idx}">
         <td data-judul="Waktu" class="mono"><button class="tombol kecil putar" aria-label="Putar detik ${j.mulai_s} sampai ${j.akhir_s}" data-a="${j.mulai_s}" data-b="${j.akhir_s}">▶</button> ${fmt(j.mulai_s, 0)}–${fmt(j.akhir_s, 0)} detik</td>
-        <td data-judul="Aktivitas suara"><span class="bar"><i style="width:${Math.min(100, j.persen_aktif_pita_katak)}%"></i></span> <span class="mono">${fmt(j.persen_aktif_pita_katak, 0)}%</span></td>
+        <td data-judul="Aktivitas suara ${pita}"><span class="bar"><i style="width:${Math.min(100, j.persen_aktif_pita_katak)}%"></i></span> <span class="mono">${fmt(j.persen_aktif_pita_katak, 0)}%</span></td>
         <td data-judul="Tebakan model Anda (belum diverifikasi)">${j.data_latih ? '<strong class="status-warn">Contoh untuk melatih model, bukan hasil pemeriksaan terpisah.</strong>' : ""}${saran(j.model_kustom)}</td>
-        <td data-judul="Tebakan Perch (belum diverifikasi)">${saran(j.perch_amfibi)}</td>
-        <td data-judul="Tebakan Perch lainnya (belum diverifikasi)">${saran(j.perch_umum)}</td>
+        <td data-judul="Tebakan Perch: amfibi saja (belum diverifikasi)">${saran(j.perch_amfibi)}</td>
+        <td data-judul="Tebakan Perch: semua kelas (belum diverifikasi)">${saran(j.perch_umum)}</td>
         <td data-judul="Label Anda"><label for="label-${j.idx}">Label Anda</label><input id="label-${j.idx}" aria-describedby="simpan-${j.idx}" class="label ${j.label ? "tersimpan" : ""}" list="daftar-label" value="${esc(j.label || "")}" placeholder="nama jenis"><span id="simpan-${j.idx}" class="status-label" role="status">${j.label ? "Tersimpan" : "Isi nama jenis atau bukan katak, lalu keluar dari kotak untuk menyimpan."}</span></td>
       </tr>`
         )
@@ -276,6 +278,7 @@ async function unggah(files, folder = false) {
     const fd = new FormData();
     fd.append("file", f);
     fd.append("perch_terfilter", terfilter);
+    fd.append("mode_rendah", $("#mode-rendah").checked);
     if (f.webkitRelativePath) fd.append("path_relatif", f.webkitRelativePath);
     try {
       terakhir = await unggahFile(fd, tampilkan);

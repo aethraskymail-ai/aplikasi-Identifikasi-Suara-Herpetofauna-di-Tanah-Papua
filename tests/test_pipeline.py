@@ -101,6 +101,35 @@ def test_nama_file_audiomoth():
     assert info_nama_file("rekaman.wav").waktu is None
 
 
+def test_aktivitas_panggilan_memenuhi_rekaman_pendek():
+    sr = 48000
+    t = np.arange(int(sr * 2.5)) / sr
+    noise = np.random.default_rng(12).normal(0, 0.001, len(t))
+    call = 0.1 * np.sin(2 * np.pi * 3000 * t) * ((t >= 0.1) & (t < 2.3))
+    segmen = deteksi.segmen_aktif(noise + call, sr)
+    assert deteksi.ringkas_aktivitas(segmen, 2.5)["persen_aktif"] >= 80
+    assert deteksi.segmen_aktif(noise, sr) == []
+    assert deteksi.segmen_aktif(np.zeros_like(t), sr) == []
+
+
+def test_mode_rendah_mempertahankan_panggilan_800_hz():
+    sr = 48000
+    t = np.arange(sr * 4) / sr
+    x = (0.1 * np.sin(2 * np.pi * 800 * t) * ((t % 0.8) < 0.4)).astype(np.float32)
+    standar = pipeline.jalankan(x, sr)
+    eksplisit = pipeline.jalankan(x, sr, mode_rendah=False)
+    rendah = pipeline.jalankan(x, sr, mode_rendah=True)
+    np.testing.assert_array_equal(standar.audio, eksplisit.audio)
+    assert pipeline.HIGHPASS_HZ == 2100
+    assert pipeline.PITA_KATAK == (2400, 3800)
+    assert not any(500 <= p.frekuensi_hz <= 3800 for p in rendah.puncak)
+    level = lambda y: pipeline.level_pita(y, sr, (750, 850))["mean_db"]
+    mentah = lambda h: h.audio / 10 ** (h.gain_db / 20)
+    assert abs(level(mentah(rendah)) - level(x)) < 3
+    assert level(mentah(standar)) < level(x) - 25
+    assert deteksi.segmen_aktif(rendah.audio, sr, pita=pipeline.PITA_RENDAH)
+
+
 def test_pipeline_meredam_gangguan_dan_menjaga_pita_katak():
     x = contoh.buat(durasi_s=20)
     h = pipeline.jalankan(x, contoh.SR)
@@ -131,6 +160,32 @@ def test_equalizer_notch_tepat_di_frekuensi():
     x = np.sin(2 * np.pi * 1500 * t).astype(np.float32)
     y = pipeline.notch_bertingkat(x, sr, [pipeline.Puncak(1500.0, 30, -10)])
     assert pipeline.max_volume_db(y[sr // 2 :]) < -60
+
+
+@pytest.mark.parametrize("frekuensi", [1500, 2150])
+def test_notch_hanya_nada_persisten(monkeypatch, frekuensi):
+    monkeypatch.setattr(pipeline, "JARAK_AMAN_PITA_HZ", 60.0)
+    sr = 48000
+    t = np.arange(sr * 6) / sr
+    noise = 0.002 * np.random.default_rng(42).standard_normal(len(t))
+    nada = 0.1 * np.sin(2 * np.pi * frekuensi * t)
+    pulsa = noise + nada * ((t % 0.55) < 0.3)
+    kontinu = noise + nada
+    p_pulsa = pipeline.cari_puncak_gangguan(pulsa, sr)
+    p_kontinu = pipeline.cari_puncak_gangguan(kontinu, sr)
+    assert not any(abs(p.frekuensi_hz - frekuensi) < 20 for p in p_pulsa)
+    assert any(abs(p.frekuensi_hz - frekuensi) < 6 for p in p_kontinu)
+    pita = (frekuensi - 20, frekuensi + 20)
+    y_pulsa = pipeline.notch_bertingkat(pulsa, sr, p_pulsa)
+    y_kontinu = pipeline.notch_bertingkat(kontinu, sr, p_kontinu)
+    level = lambda x: pipeline.level_pita(x[sr:], sr, pita)["mean_db"]
+    assert abs(level(y_pulsa) - level(pulsa)) < 1
+    assert level(y_kontinu) < level(kontinu) - 30
+
+
+@pytest.mark.parametrize("durasi", [0, 0.1, 1])
+def test_notch_tanpa_bukti_nada(durasi):
+    assert pipeline.cari_puncak_gangguan(np.zeros(int(48000 * durasi)), 48000) == []
 
 
 @pytest.mark.parametrize("amplitudo,senyap", [(0, True), (1e-8, True), (0.1, False)])
