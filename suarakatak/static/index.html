@@ -26,14 +26,25 @@
 
 <main>
   <section id="tab-analisis">
+    <div class="kartu prosa" id="cara-pakai">
+      <h2>Cara pakai</h2>
+      <ol>
+        <li><strong>Unggah rekaman</strong> lewat tombol Pilih file.</li>
+        <li><strong>Dengarkan</strong> rekaman asli atau suara yang sudah dibersihkan.</li>
+        <li><strong>Beri label</strong> pada tiap bagian 5 detik: nama jenis yang Anda kenali, atau bukan katak. Label disimpan saat Anda selesai mengetik dan keluar dari kotak.</li>
+        <li><strong>Latih model</strong> di tab Model &amp; label setelah memberi label sedikitnya dua kelompok berbeda.</li>
+      </ol>
+      <p>Tebakan belum membuktikan jenis katak. Mintalah pemeriksaan ahli sebelum memakai hasilnya.</p>
+    </div>
     <div class="kartu unggah" id="zona-unggah">
       <p><strong>Unggah rekaman</strong> (WAV/FLAC/MP3/M4A, boleh banyak sekaligus). Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00.</p>
       <div class="baris">
         <label class="tombol utama">Pilih file<input type="file" id="input-file" accept=".wav,.WAV,.flac,.mp3,.m4a,.ogg,audio/*" multiple hidden></label>
         <button class="tombol" id="tombol-contoh">Coba contoh sintetis</button>
-        <label class="cek"><input type="checkbox" id="perch-terfilter"> Perch memakai audio terfilter</label>
+        <label class="cek"><input type="checkbox" id="perch-terfilter" aria-describedby="penjelasan-perch"> Pakai suara yang dibersihkan untuk Perch</label>
       </div>
-      <div id="progres" class="muted"></div>
+      <p class="muted" id="penjelasan-perch">Centang agar Perch menebak dari suara yang sudah dikurangi gangguannya; jika tidak, Perch memakai rekaman asli.</p>
+      <div id="progres" class="muted" role="status"></div>
     </div>
 
     <div class="tata">
@@ -47,21 +58,30 @@
 
   <section id="tab-model" hidden>
     <div class="kartu">
-      <h2>Model kustom (Perch embedding + regresi logistik)</h2>
+      <h2>Model dari label Anda</h2>
       <p class="muted">Beri label per jendela 5 detik di tab Analisis (nama jenis, atau <em>bukan katak</em>), lalu latih. Model baru dipakai di semua rekaman.</p>
       <div class="baris">
         <button class="tombol utama" id="tombol-latih">Latih model</button>
         <a class="tombol" href="/api/label.csv">Unduh label (CSV)</a>
       </div>
       <div id="hasil-latih"></div>
-      <h3>Jumlah label per kelas</h3>
+      <p id="peringatan-model" class="peringatan" role="status"></p>
+      <h3>Jumlah label per kelompok</h3>
       <table class="tabel" id="tabel-label"><tbody></tbody></table>
     </div>
   </section>
 
   <section id="tab-panduan" hidden>
     <div class="kartu prosa">
-      <h2>Cara kerja</h2>
+      <h2>Cara pakai</h2>
+      <ol>
+        <li><strong>Unggah rekaman</strong> lewat Pilih file di tab Analisis.</li>
+        <li><strong>Dengarkan</strong> rekaman asli atau suara yang sudah dibersihkan dengan tombol putar.</li>
+        <li><strong>Beri label</strong> pada tiap bagian 5 detik: nama jenis yang Anda kenali, atau bukan katak. Keluar dari kotak lalu tunggu tulisan Tersimpan.</li>
+        <li><strong>Latih model</strong> di tab Model &amp; label. Siapkan sedikitnya dua kelompok berbeda, dan tambahkan banyak contoh untuk tiap kelompok.</li>
+      </ol>
+      <p>Semua tebakan belum diverifikasi. Persentase tinggi bukan bukti bahwa jenisnya benar. Minta ahli memeriksa hasil sebelum mengambil kesimpulan.</p>
+      <h2>Detail teknis</h2>
       <ol>
         <li><strong>Penyaringan tervalidasi</strong>: highpass 2.100 Hz ×2, lowpass 8.000 Hz ×2, deteksi puncak nada sempit via FFT rata-rata per file di luar pita katak 2,4–3,8 kHz, notch bertingkat (−40..−50 dB, 3 lebar), normalisasi puncak ke −2 dBFS, keluaran 48 kHz PCM 16-bit. Tidak memakai afftdn/anlmdn, spectral subtraction, bandreject statis atau loudnorm.</li>
         <li><strong>Deteksi aktivitas</strong> di pita katak: bagian yang ≥6 dB di atas lantai derau.</li>

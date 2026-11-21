@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import os
 import re
 import shutil
@@ -27,6 +28,7 @@ EKSTENSI = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"}
 
 app = FastAPI(title="Identifikasi Suara Herpetofauna Tanah Papua", version=__version__)
 db = Penyimpanan(DATA_DIR / "suarakatak.sqlite")
+logger = logging.getLogger(__name__)
 
 
 def _folder(rid: str) -> Path:
@@ -59,18 +61,19 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) 
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
-        raise HTTPException(400, f"Format {ext or '?'} belum didukung. Pakai WAV/FLAC/MP3/M4A/OGG.")
+        raise HTTPException(400, "Jenis file ini belum didukung. Coba file WAV, FLAC, MP3, M4A, atau OGG.")
     rid = uuid.uuid4().hex[:12]
     folder = FOLDER_REKAMAN / rid
     folder.mkdir(parents=True)
     path_asli = folder / f"asli{ext}"
-    with open(path_asli, "wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
+        with open(path_asli, "wb") as f:
+            shutil.copyfileobj(file.file, f)
         return _proses(path_asli, folder, rid, nama, perch_terfilter)
     except Exception as e:
+        logger.exception("Gagal menganalisis rekaman %s", rid)
         shutil.rmtree(folder, ignore_errors=True)
-        raise HTTPException(422, f"Gagal menganalisis {nama}: {e}") from e
+        raise HTTPException(422, "Rekaman belum bisa dibaca. File mungkin rusak. Coba file WAV lain.") from e
 
 
 @app.post("/api/contoh")
