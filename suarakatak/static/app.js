@@ -90,7 +90,7 @@ async function buka(id) {
       : '<span class="status-warn">di luar jendela 17:30–21:00</span>';
   const puncak = d.penyaringan.puncak_dinotch;
   const adaMulai = d.jendela.length > 0;
-  const namaAsli = d.nama_file.split(/[\\/]/).pop();
+  const namaAsli = d.nama_file.split(/[\\/]/).pop().replace(/ \([^)]*\)$/, "");
   const namaDibersihkan = namaAsli.replace(/\.[^.]+$/, "") + "-dibersihkan.wav";
   $("#detail").innerHTML = `
     <div class="baris" style="justify-content:space-between">
