@@ -81,7 +81,7 @@ def test_rekaman_harian(client):
 
 
 def test_error_tak_terduga_tidak_bocor(client, monkeypatch, caplog):
-    def gagal(path, folder, rid, nama, terfilter, path_relatif=""):
+    def gagal(path, folder, rid, nama, perch_terfilter, path_relatif="", mode_rendah=False):
         server.db.simpan_rekaman(rid, nama, {}, [])
         raise RuntimeError("rahasia /internal/path command")
 
@@ -119,7 +119,7 @@ def test_pembersihan_db_gagal_folder_tetap_dihapus(client, monkeypatch, caplog, 
     def gagal_hapus(rid):
         raise RuntimeError("SQLite hanya baca")
 
-    def gagal_proses(*args):
+    def gagal_proses(*args, **kwargs):
         raise RuntimeError("kesalahan internal")
 
     monkeypatch.setattr(server.db, "hapus_rekaman", gagal_hapus)
@@ -148,3 +148,19 @@ def test_path_folder_hanya_metadata(client, path_relatif, par):
     assert data["audiomoth"]["waktu"] == "2024-01-01 18:30:00"
     assert (server.FOLDER_REKAMAN / data["id"] / "asli.wav").is_file()
     assert len(list(server.FOLDER_REKAMAN.iterdir())) == 1
+
+
+@pytest.mark.parametrize("mode_rendah", [False, True])
+def test_mode_dan_folder_diteruskan_bersama(client, mode_rendah):
+    response = client.post(
+        "/api/analisis", files={"file": ("20240101_183000.WAV", wav(), "audio/wav")},
+        data={"mode_rendah": str(mode_rendah).lower(),
+              "path_relatif": "PAR007/20240101_183000.WAV"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode_rendah"] is mode_rendah
+    assert data["pita_aktivitas_hz"] == ([500, 3800] if mode_rendah else [2400, 3800])
+    assert data["audiomoth"]["par"] == "PAR007"
+    assert data["peringatan"] == []
+    stored = client.get(f'/api/rekaman/{data["id"]}').json()
+    assert stored["mode_rendah"] is mode_rendah
