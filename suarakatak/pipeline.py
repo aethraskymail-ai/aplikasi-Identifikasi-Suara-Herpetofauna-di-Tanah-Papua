@@ -131,7 +131,7 @@ def normalisasi_puncak(x: np.ndarray, target_db: float = TARGET_PUNCAK_DB) -> tu
     return (x * 10 ** (gain / 20)).astype(np.float32), round(gain, 2)
 
 
-def level_pita(x: np.ndarray, sr: int, pita: tuple[float, float]) -> dict[str, float | None]:
+def level_pita(x: np.ndarray, sr: int, pita: tuple[float, float]) -> dict[str, float | bool | None]:
     """Level rata-rata (RMS) dan puncak di satu pita, dengan bandpass FFT tajam.
 
     Bandpass biquad seperti `bandpass` ffmpeg terlalu landai: dengung yang lebih keras dari katak
@@ -145,7 +145,8 @@ def level_pita(x: np.ndarray, sr: int, pita: tuple[float, float]) -> dict[str, f
     spek[(f < lo) | (f > hi)] = 0
     y = np.fft.irfft(spek, n=len(x))
     rms = np.sqrt(np.mean(y**2) + 1e-20)
-    return {"mean_db": round(float(20 * np.log10(rms)), 1), "max_db": round(max_volume_db(y), 1)}
+    mean_db = float(20 * np.log10(rms))
+    return {"mean_db": round(mean_db, 1), "max_db": round(max_volume_db(y), 1), "senyap": mean_db <= -150}
 
 
 @dataclass

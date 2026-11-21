@@ -75,7 +75,9 @@ function tabelLevel(d) {
     .map((k) => {
       const a = p.level_sebelum[k].mean_db, b = p.level_sesudah[k].mean_db;
       if (a == null || b == null) return `<tr><td>${esc(k)}</td><td colspan="3">Tidak bisa dinilai: laju sampel terlalu rendah.</td></tr>`;
-      return `<tr><td>${esc(k)}</td><td class="angka">${fmt(a)} dB</td><td class="angka">${fmt(b)} dB</td><td class="angka">${fmt(b - a)} dB</td></tr>`;
+      const senyapA = p.level_sebelum[k].senyap || a <= -150;
+      const senyapB = p.level_sesudah[k].senyap || b <= -150;
+      return `<tr><td>${esc(k)}</td><td class="angka">${senyapA ? "senyap" : `${fmt(a)} dB`}</td><td class="angka">${senyapB ? "senyap" : `${fmt(b)} dB`}</td><td class="angka">${senyapA || senyapB ? "–" : `${fmt(b - a)} dB`}</td></tr>`;
     })
     .join("")}</tbody></table>`;
 }

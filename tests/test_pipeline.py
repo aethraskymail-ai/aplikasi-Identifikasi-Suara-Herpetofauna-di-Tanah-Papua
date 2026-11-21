@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from suarakatak import contoh, deteksi, pipeline
 from suarakatak.audio import info_nama_file
@@ -42,3 +43,18 @@ def test_equalizer_notch_tepat_di_frekuensi():
     x = np.sin(2 * np.pi * 1500 * t).astype(np.float32)
     y = pipeline.notch_bertingkat(x, sr, [pipeline.Puncak(1500.0, 30, -10)])
     assert pipeline.max_volume_db(y[sr // 2 :]) < -60
+
+
+@pytest.mark.parametrize("amplitudo,senyap", [(0, True), (1e-8, True), (0.1, False)])
+def test_level_pita_senyap_tetap_numerik(amplitudo, senyap):
+    sr = 48000
+    t = np.arange(sr) / sr
+    level = pipeline.level_pita(amplitudo * np.sin(2 * np.pi * 3000 * t), sr, pipeline.PITA_KATAK)
+    assert level["senyap"] is senyap
+    assert np.isfinite(level["mean_db"])
+    assert np.isfinite(level["max_db"])
+
+
+def test_pita_tidak_terukur_bukan_senyap():
+    level = pipeline.level_pita(np.zeros(8000), 8000, (4300, 6600))
+    assert level == {"mean_db": None, "max_db": None}
