@@ -27,9 +27,10 @@
 <main>
   <section id="tab-analisis">
     <div class="kartu unggah" id="zona-unggah">
-      <p><strong>Unggah rekaman</strong> (WAV/FLAC/MP3/M4A, boleh banyak sekaligus). Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00.</p>
+      <p><strong>Unggah rekaman</strong> (WAV/FLAC/MP3/M4A, boleh banyak sekaligus). Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00. Gunakan <strong>Pilih folder</strong> untuk membaca lokasi PARxxx dari nama folder; file bukan audio akan dilewati.</p>
       <div class="baris">
         <label class="tombol utama">Pilih file<input type="file" id="input-file" accept=".wav,.WAV,.flac,.mp3,.m4a,.ogg,audio/*" multiple hidden></label>
+        <label class="tombol">Pilih folder<input type="file" id="input-folder" webkitdirectory multiple hidden></label>
         <button class="tombol" id="tombol-contoh">Coba contoh sintetis</button>
         <label class="cek"><input type="checkbox" id="perch-terfilter"> Perch memakai audio terfilter</label>
       </div>

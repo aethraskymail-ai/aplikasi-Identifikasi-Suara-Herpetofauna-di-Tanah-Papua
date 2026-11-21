@@ -19,6 +19,10 @@ JENDELA_MULAI = time(17, 30)
 JENDELA_SELESAI = time(21, 0)
 
 
+class AudioTidakValid(ValueError):
+    pass
+
+
 @dataclass
 class InfoAudioMoth:
     waktu: datetime | None
