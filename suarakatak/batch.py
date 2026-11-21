@@ -3,6 +3,7 @@
     python -m suarakatak.batch --masukan I:\\PAR --keluaran I:\\HASIL_EKSTRAKSI\\HASIL [--perch]
 
 - Memilih file berdasarkan jam di nama `YYYYMMDD_HHMMSS.WAV` (default 17:30–21:00).
+- Rekaman harian `PARxxx_YYYY-MM-DD.mp3` diproses utuh; jam tidak diketahui, tanpa seleksi `--jam`.
 - Menulis `HASIL\\<PARxxx>\\<tanggal>\\<file>.WAV` (48 kHz PCM s16) + menyalin `CONFIG.TXT`.
 - Menulis `ringkasan.csv` (level pita sebelum/sesudah, nada yang di-notch, aktivitas pita katak).
 - `--perch`: menambah tebakan Perch dan menyimpan embedding per file ke `embedding/<PAR>/<file>.npz`
@@ -97,10 +98,12 @@ def _jam(s: str) -> time:
 
 def cari_file(masukan: Path, mulai: time, selesai: time):
     for path in sorted(masukan.rglob("*")):
-        if path.suffix.lower() not in {".wav", ".flac"} or not path.is_file():
+        if path.suffix.lower() not in {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"} or not path.is_file():
             continue
         info = info_nama_file(path)
-        if info.waktu is None or not dalam_jendela(info.waktu.time(), mulai, selesai):
+        if info.tanggal is None:
+            continue
+        if info.waktu is not None and not dalam_jendela(info.waktu.time(), mulai, selesai):
             continue
         yield path, info
 
@@ -131,14 +134,16 @@ def _main(argv=None) -> int:
         for path, info in cari_file(args.masukan, mulai, selesai):
             ditemukan += 1
             par = info.par or path.parent.name
-            tanggal = info.waktu.strftime("%Y-%m-%d")
+            tanggal = info.tanggal.isoformat()
             tujuan = args.keluaran / par / tanggal / (path.stem + ".WAV")
             emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
-            identitas = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ")}
+            identitas = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ") if info.waktu else ""}
             lama = semua_baris.get(_kunci(identitas), {})
             if (tujuan.exists() and lama.get("status") == "ok"
                     and (not args.perch or (emb_path.exists() and lama.get("tebakan_perch_belum_terverifikasi")))):
                 continue
+            if info.waktu is None:
+                print(f"{path.name}: jam tidak diketahui; seluruh audio dianalisis (tanpa seleksi --jam).", file=sys.stderr)
             baris = dict(lama) if lama.get("status") == "ok" else identitas.copy()
             try:
                 tujuan.parent.mkdir(parents=True, exist_ok=True)
@@ -199,7 +204,7 @@ def _main(argv=None) -> int:
             if args.batas and n >= args.batas:
                 break
     if not ditemukan:
-        print(f"Tidak ada file WAV/FLAC dengan nama bertanggal dalam jendela {args.jam} di {args.masukan}.", file=sys.stderr)
+        print(f"Tidak ada file audio bertanggal dalam jendela {args.jam} di {args.masukan}.", file=sys.stderr)
         return 0
     if not n:
         print(f"Tidak ada file baru: semua hasil sudah lengkap → {path_csv}", file=sys.stderr)

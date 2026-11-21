@@ -1,4 +1,7 @@
 import csv
+from datetime import time
+import shutil
+import subprocess
 from types import SimpleNamespace
 
 import numpy as np
@@ -140,7 +143,7 @@ def test_empty_window(drive, capsys):
     path.rename(path.with_name("20261118_120000.wav"))
     assert run(drive) == 0
     text = capsys.readouterr().err
-    assert "Tidak ada file WAV/FLAC" in text and "Selesai" not in text
+    assert "Tidak ada file audio bertanggal" in text and "Selesai" not in text
 
 
 @pytest.mark.parametrize("content", [b"", b"not a WAV"])
@@ -233,6 +236,33 @@ def test_journal_last_row_wins_and_incomplete_row_ignored(drive):
     assert batch._baca_csv(out / "ringkasan.csv")[batch._kunci(row)]["status"] == row["status"]
     assert run(drive) == 0
     assert len(rows(out)) == 1 and rows(out)[0]["status"] == "ok"
+
+
+def test_pilih_mp3_harian(tmp_path):
+    for nama in ["PAR001_2026-05-06.mp3", "PAR001_2026-02-30.mp3", "unknown.mp3",
+                 "PAR001_2026-05-07.mp3.part", "20260506_090000.WAV", "20260506_183000.WAV"]:
+        (tmp_path / nama).touch()
+    hasil = list(batch.cari_file(tmp_path, time(17, 30), time(21)))
+    assert [p.name for p, _ in hasil] == ["20260506_183000.WAV", "PAR001_2026-05-06.mp3"]
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="ffmpeg diperlukan untuk membuat MP3")
+def test_batch_mp3_harian(tmp_path):
+    source = tmp_path / "source.wav"
+    sf.write(source, np.zeros(48000), 48000)
+    masukan = tmp_path / "masukan"
+    masukan.mkdir()
+    nama = "PAR024_PAR015_2026-05-13.mp3"
+    subprocess.run(["ffmpeg", "-v", "error", "-i", str(source), str(masukan / nama)], check=True)
+    keluaran = tmp_path / "hasil"
+    assert batch.main(["--masukan", str(masukan), "--keluaran", str(keluaran)]) == 0
+    with (keluaran / "ringkasan.csv").open() as f:
+        row = next(csv.DictReader(f))
+    assert row["status"] == "ok"
+    assert row["waktu"] == ""
+    assert row["tanggal"] == "2026-05-13"
+    assert row["par"] == "PAR024_PAR015"
+    assert (keluaran / "PAR024_PAR015" / "2026-05-13" / nama.replace(".mp3", ".WAV")).exists()
 
 
 @pytest.mark.parametrize("sr", [48000, 8000])
