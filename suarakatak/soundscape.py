@@ -8,6 +8,7 @@ puncak di bin frekuensi tersebut. Ini gambaran komposisi suara, bukan identifika
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -52,7 +53,7 @@ def hitung(path_asli: Path, cache: Path) -> list[dict]:
         if len(potong) < sr:  # sisa < 1 detik tidak cukup untuk spektrum yang stabil
             continue
         segmen.append({"offset_s": i / sr, "bin": puncak_segmen(potong, sr)})
-    tmp = cache.with_suffix(".tmp")
+    tmp = cache.with_name(f"{cache.name}.{uuid.uuid4().hex}.tmp")
     tmp.write_text(json.dumps({"versi": VERSI, "segmen": segmen}))
     tmp.replace(cache)
     return segmen
