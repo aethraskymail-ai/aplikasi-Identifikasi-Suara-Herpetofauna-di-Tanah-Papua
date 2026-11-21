@@ -76,6 +76,7 @@ def main(argv=None) -> int:
             if tujuan.exists() and (not args.perch or emb_path.exists()):
                 continue
             sementara = tujuan.with_name(path.stem + ".part.WAV")
+            emb_sementara = emb_path.with_name(path.stem + ".part.npz")
             tujuan.parent.mkdir(parents=True, exist_ok=True)
             config = next((p for p in path.parents if (p / "CONFIG.TXT").exists()), None)
             if config and not (tujuan.parent / "CONFIG.TXT").exists():
@@ -108,16 +109,19 @@ def main(argv=None) -> int:
                     baris["perch_amfibi_teratas"] = perch.teratas(agg, 1)[0]["label"]
                     emb_path.parent.mkdir(parents=True, exist_ok=True)
                     np.savez_compressed(
-                        emb_path,
+                        emb_sementara,
                         embedding=np.stack([j.embedding for j in jendela]).astype(np.float16),
                         mulai_s=np.array([j.mulai_s for j in jendela]),
                     )
             except Exception as e:
                 baris["status"] = f"gagal: {e}"
                 sementara.unlink(missing_ok=True)
+                emb_sementara.unlink(missing_ok=True)
             w.writerow(baris)
             fcsv.flush()
             if baris["status"] == "ok":
+                if args.perch:
+                    emb_sementara.replace(emb_path)
                 sementara.replace(tujuan)
             n += 1
             print(f"[{n}] {par}/{path.name} {baris['status']}", file=sys.stderr)
