@@ -58,3 +58,33 @@ def test_level_pita_senyap_tetap_numerik(amplitudo, senyap):
 def test_pita_tidak_terukur_bukan_senyap():
     level = pipeline.level_pita(np.zeros(8000), 8000, (4300, 6600))
     assert level == {"mean_db": None, "max_db": None}
+
+
+def test_notch_dekat_tepi_tidak_memotong_pita_katak():
+    from suarakatak.pipeline import level_pita
+
+    sr = 48000
+    t = np.arange(sr * 4) / sr
+    x = (0.3 * np.sin(2 * np.pi * 3900 * t) + 0.05 * np.sin(2 * np.pi * 3780 * t)).astype(np.float32)
+    puncak = pipeline.cari_puncak_gangguan(x, sr)
+    y = pipeline.notch_bertingkat(x, sr, puncak)
+    pita = (3760.0, 3800.0)
+    assert abs(level_pita(y, sr, pita)["mean_db"] - level_pita(x, sr, pita)["mean_db"]) < 1.5
+
+
+def test_rekaman_44100_dikeluarkan_48000():
+    x = contoh.buat(durasi_s=3.0)
+    from suarakatak.audio import resample
+
+    h = pipeline.jalankan(resample(x, 48000, 44100), 44100)
+    assert h.sr == 48000
+
+
+def test_rekaman_8khz_keluaran_48khz_tidak_menambah_pita_terukur():
+    sr = 8000
+    t = np.arange(sr) / sr
+    h = pipeline.jalankan((0.1 * np.sin(2 * np.pi * 3000 * t)).astype(np.float32), sr)
+    assert h.sr == 48000
+    for level in (h.level_sebelum, h.level_sesudah):
+        assert level["jangkrik (4300–6600 Hz)"] == {"mean_db": None, "max_db": None}
+        assert level["katak (2400–3800 Hz)"]["mean_db"] is not None

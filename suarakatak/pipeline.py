@@ -24,6 +24,8 @@ SR_KELUARAN = 48000
 
 # (lebar Hz, gain dB) — notch bertingkat: sempit-dalam, sedang, lebar-dangkal.
 TINGKAT_NOTCH = ((5.0, -50.0), (12.0, -45.0), (25.0, -40.0))
+# Rok gabungan tiga tahap notch masih ~-5 dB pada 120 Hz dan ~-1 dB pada 300 Hz dari pusatnya.
+JARAK_AMAN_PITA_HZ = 300.0
 
 PITA_VERIFIKASI = {
     "dengung (900–1900 Hz)": (900.0, 1900.0),
@@ -106,7 +108,7 @@ def cari_puncak_gangguan(
         fi = float(f[i])
         if fi < f_min or fi > min(f_max, 0.45 * sr):
             continue
-        if PITA_KATAK[0] - 60 <= fi <= PITA_KATAK[1] + 60:
+        if PITA_KATAK[0] - JARAK_AMAN_PITA_HZ <= fi <= PITA_KATAK[1] + JARAK_AMAN_PITA_HZ:
             continue
         hasil.append(Puncak(round(fi, 1), round(float(menonjol[i]), 1), round(float(db[i]), 1)))
     hasil.sort(key=lambda p: p.level_db, reverse=True)
@@ -170,7 +172,8 @@ class HasilSaring:
 def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
     from .audio import resample
 
-    if sr != SR_KELUARAN and sr > SR_KELUARAN:
+    sr_asli = sr
+    if sr != SR_KELUARAN:
         x = resample(x, sr, SR_KELUARAN)
         sr = SR_KELUARAN
     sebelum = {nama: level_pita(x, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
@@ -178,6 +181,10 @@ def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
     puncak = cari_puncak_gangguan(y, sr)
     y = notch_bertingkat(y, sr, puncak)
     sesudah_mentah = {nama: level_pita(y, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
+    for nama, (_, hi) in PITA_VERIFIKASI.items():
+        if hi > sr_asli / 2:
+            sebelum[nama] = {"mean_db": None, "max_db": None}
+            sesudah_mentah[nama] = {"mean_db": None, "max_db": None}
     y, gain = normalisasi_puncak(y)
     # Level sesudah dilaporkan sebelum normalisasi agar bisa dibandingkan langsung dengan level asal.
     return HasilSaring(y, sr, puncak, gain, sebelum, sesudah_mentah)
