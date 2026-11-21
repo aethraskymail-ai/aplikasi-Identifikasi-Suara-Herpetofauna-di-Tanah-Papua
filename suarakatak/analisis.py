@@ -10,16 +10,25 @@ from . import deteksi, perch, pipeline
 from .audio import AudioTidakValid, info_nama_file, muat_audio, simpan_wav
 
 
-def gambar_spektrogram(x: np.ndarray, sr: int, path, judul: str) -> None:
+SKALA_SPEKTROGRAM_DB = (-150, -40)
+
+
+def gambar_spektrogram(x: np.ndarray, sr: int, path, judul: str, gain_db: float = 0,
+                      pita: tuple[float, float] = pipeline.PITA_KATAK) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(10, 3.2), dpi=110)
-    ax.specgram(x, NFFT=2048, Fs=sr, noverlap=1024, cmap="magma", vmin=-150, vmax=-40)
-    ax.set_ylim(0, min(8500, sr / 2))
-    for f in pipeline.PITA_KATAK:
+    durasi = len(x) / sr
+    lebar = 10 if durasi <= 30 else min(30, max(16, durasi / 3))
+    fig, ax = plt.subplots(figsize=(lebar, 3.2), dpi=110)
+    _, _, _, gambar = ax.specgram(x / 10 ** (gain_db / 20), NFFT=2048, Fs=sr,
+                                  noverlap=1024, cmap="magma",
+                                  vmin=SKALA_SPEKTROGRAM_DB[0], vmax=SKALA_SPEKTROGRAM_DB[1])
+    fig.colorbar(gambar, ax=ax, label="Level (dB)")
+    ax.set_ylim(0, min(12000, sr / 2))
+    for f in pita:
         ax.axhline(f, color="#7CFC9A", lw=0.8, ls="--")
     ax.set_xlabel("detik")
     ax.set_ylabel("Hz")
@@ -34,7 +43,8 @@ def _persen_aktif(segmen: list[dict], a: float, b: float) -> float:
     return round(100 * tumpang / max(b - a, 1e-6), 1)
 
 
-def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = False, nama_metadata: str = ""):
+def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = False,
+                  nama_metadata: str = "", mode_rendah: bool = False):
     """Mengembalikan (ringkasan JSON, daftar Jendela Perch atau [])."""
     try:
         x, sr = muat_audio(path_asli)
@@ -51,11 +61,14 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
     if tidak_terukur:
         peringatan.append(f"Laju sampel {sr} Hz: frekuensi di atas {sr / 2:g} Hz tidak terekam; pita {', '.join(tidak_terukur)} tidak bisa dinilai sepenuhnya. Gunakan rekaman dengan laju sampel lebih tinggi.")
     info = info_nama_file(nama_metadata or nama_file)
-    hasil = pipeline.jalankan(x, sr)
+    pita = pipeline.PITA_RENDAH if mode_rendah else pipeline.PITA_KATAK
+    hasil = pipeline.jalankan(x, sr, mode_rendah=mode_rendah)
     simpan_wav(folder / "terfilter.wav", hasil.audio, hasil.sr)
-    gambar_spektrogram(x, sr, folder / "sebelum.png", "Sebelum penyaringan")
-    gambar_spektrogram(hasil.audio, hasil.sr, folder / "sesudah.png", "Sesudah penyaringan (pita katak 2,4–3,8 kHz bergaris)")
-    segmen = deteksi.segmen_aktif(hasil.audio, hasil.sr)
+    gambar_spektrogram(x, sr, folder / "sebelum.png", "Sebelum penyaringan", pita=pita)
+    gambar_spektrogram(hasil.audio, hasil.sr, folder / "sesudah.png",
+                      f"Sesudah penyaringan, sebelum normalisasi (pita {pita[0]:g}–{pita[1]:g} Hz bergaris)",
+                      gain_db=hasil.gain_db, pita=pita)
+    segmen = deteksi.segmen_aktif(hasil.audio, hasil.sr, pita=pita)
 
     jendela, catatan_perch = [], None
     if perch.tersedia():
@@ -73,6 +86,8 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
         "durasi_s": round(durasi, 2),
         "sample_rate_asli": sr,
         "peringatan": peringatan,
+        "mode_rendah": mode_rendah,
+        "pita_aktivitas_hz": list(pita),
         "audiomoth": {
             "waktu": info.waktu.isoformat(sep=" ") if info.waktu else None,
             "dalam_jendela_1730_2100": info.dalam_jendela,

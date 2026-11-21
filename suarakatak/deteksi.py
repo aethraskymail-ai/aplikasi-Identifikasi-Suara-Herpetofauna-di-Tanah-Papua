@@ -8,11 +8,12 @@ from scipy.signal import stft
 from .pipeline import PITA_KATAK
 
 
-def energi_pita(x: np.ndarray, sr: int, frame_s: float = 0.1) -> tuple[np.ndarray, np.ndarray]:
+def energi_pita(x: np.ndarray, sr: int, frame_s: float = 0.1,
+                pita: tuple[float, float] = PITA_KATAK) -> tuple[np.ndarray, np.ndarray]:
     nper = int(sr * frame_s)
     f, t, z = stft(x, fs=sr, nperseg=nper, noverlap=0, boundary=None, padded=False)
     p = np.abs(z) ** 2
-    m = (f >= PITA_KATAK[0]) & (f <= PITA_KATAK[1])
+    m = (f >= pita[0]) & (f <= pita[1])
     return t, 10 * np.log10(p[m].sum(axis=0) + 1e-20)
 
 
@@ -22,12 +23,17 @@ def segmen_aktif(
     ambang_db: float = 6.0,
     min_durasi_s: float = 0.2,
     gabung_jeda_s: float = 0.3,
+    pita: tuple[float, float] = PITA_KATAK,
 ) -> list[dict]:
-    """Segmen yang energinya > lantai derau (persentil 20) + ambang."""
-    t, e = energi_pita(x, sr)
+    """Energi di atas persentil 5: jeda singkat tetap bisa menjadi acuan derau.
+
+    Ini aktivitas energi pita, bukan bukti keberadaan katak. Rekaman tanpa
+    jeda sama sekali tidak menyediakan acuan derau temporal yang independen.
+    """
+    t, e = energi_pita(x, sr, pita=pita)
     if len(e) == 0:
         return []
-    lantai = float(np.percentile(e, 20))
+    lantai = float(np.percentile(e, 5))
     aktif = e > lantai + ambang_db
     dt = t[1] - t[0] if len(t) > 1 else 0.1
     segmen: list[list[float]] = []
