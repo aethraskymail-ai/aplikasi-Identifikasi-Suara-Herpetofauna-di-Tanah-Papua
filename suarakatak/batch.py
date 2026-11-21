@@ -55,6 +55,9 @@ def _baca_csv(path):
     if path.exists():
         with path.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
+                status = row.get("status") or ""
+                if status != "ok" and not status.startswith("gagal:"):
+                    continue
                 row["tebakan_perch_belum_terverifikasi"] = row.pop(
                     "perch_amfibi_teratas", row.get("tebakan_perch_belum_terverifikasi", "")
                 )
@@ -68,6 +71,23 @@ def _simpan_csv(path, baris):
             w = csv.DictWriter(f, fieldnames=KOLOM)
             w.writeheader()
             w.writerows(baris.values())
+
+
+@contextmanager
+def _jurnal_csv(path, baris):
+    _simpan_csv(path, baris)
+    try:
+        with path.open("a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=KOLOM)
+
+            def catat(row):
+                writer.writerow(row)
+                f.flush()
+                baris[_kunci(row)] = row
+
+            yield catat
+    finally:
+        _simpan_csv(path, _baca_csv(path))
 
 
 def _jam(s: str) -> time:
@@ -101,85 +121,83 @@ def _main(argv=None) -> int:
     args.keluaran.mkdir(parents=True, exist_ok=True)
     path_csv = args.keluaran / "ringkasan.csv"
     semua_baris = _baca_csv(path_csv)
-    if path_csv.exists():
-        _simpan_csv(path_csv, semua_baris)
     if args.perch:
         from . import perch
 
     n = 0
     ditemukan = 0
     gagal = 0
-    for path, info in cari_file(args.masukan, mulai, selesai):
-        ditemukan += 1
-        par = info.par or path.parent.name
-        tanggal = info.waktu.strftime("%Y-%m-%d")
-        tujuan = args.keluaran / par / tanggal / (path.stem + ".WAV")
-        emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
-        identitas = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ")}
-        lama = semua_baris.get(_kunci(identitas), {})
-        if (tujuan.exists() and lama.get("status") == "ok"
-                and (not args.perch or (emb_path.exists() and lama.get("tebakan_perch_belum_terverifikasi")))):
-            continue
-        baris = dict(lama) if lama.get("status") == "ok" else identitas.copy()
-        try:
-            tujuan.parent.mkdir(parents=True, exist_ok=True)
-            config = next((p for p in path.parents if (p / "CONFIG.TXT").exists()), None)
-            if config and not (tujuan.parent / "CONFIG.TXT").exists():
-                shutil.copy2(config / "CONFIG.TXT", tujuan.parent / "CONFIG.TXT")
-            x = None
-            if tujuan.exists():
-                try:
-                    x, sr = muat_audio(tujuan)
-                    if not len(x):
+    with _jurnal_csv(path_csv, semua_baris) as catat:
+        for path, info in cari_file(args.masukan, mulai, selesai):
+            ditemukan += 1
+            par = info.par or path.parent.name
+            tanggal = info.waktu.strftime("%Y-%m-%d")
+            tujuan = args.keluaran / par / tanggal / (path.stem + ".WAV")
+            emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
+            identitas = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ")}
+            lama = semua_baris.get(_kunci(identitas), {})
+            if (tujuan.exists() and lama.get("status") == "ok"
+                    and (not args.perch or (emb_path.exists() and lama.get("tebakan_perch_belum_terverifikasi")))):
+                continue
+            baris = dict(lama) if lama.get("status") == "ok" else identitas.copy()
+            try:
+                tujuan.parent.mkdir(parents=True, exist_ok=True)
+                config = next((p for p in path.parents if (p / "CONFIG.TXT").exists()), None)
+                if config and not (tujuan.parent / "CONFIG.TXT").exists():
+                    shutil.copy2(config / "CONFIG.TXT", tujuan.parent / "CONFIG.TXT")
+                x = None
+                if tujuan.exists():
+                    try:
+                        x, sr = muat_audio(tujuan)
+                        if not len(x):
+                            x = None
+                    except Exception:
                         x = None
-                except Exception:
-                    x = None
-            if x is None or lama.get("status") != "ok":
-                asli, sr_asli = muat_audio(path)
-                h = pipeline.jalankan(asli, sr_asli)
-                if x is None:
-                    with _atomik(tujuan) as sementara:
-                        simpan_wav(sementara, h.audio, h.sr)
-                    x, sr = muat_audio(tujuan)
-                seg = deteksi.segmen_aktif(x, sr)
-                akt = deteksi.ringkas_aktivitas(seg, len(x) / sr)
-                ks, kd, kj = "katak (2400–3800 Hz)", "dengung (900–1900 Hz)", "jangkrik (4300–6600 Hz)"
-                baris.update(
-                    durasi_s=round(len(x) / sr, 2),
-                    puncak_dinotch_hz=" ".join(f"{p.frekuensi_hz:.0f}" for p in h.puncak),
-                    gain_db=h.gain_db,
-                    katak_mean_db_sebelum=h.level_sebelum[ks]["mean_db"],
-                    katak_mean_db_sesudah=h.level_sesudah[ks]["mean_db"],
-                    dengung_mean_db_sebelum=h.level_sebelum[kd]["mean_db"],
-                    dengung_mean_db_sesudah=h.level_sesudah[kd]["mean_db"],
-                    jangkrik_mean_db_sebelum=h.level_sebelum[kj]["mean_db"],
-                    jangkrik_mean_db_sesudah=h.level_sesudah[kj]["mean_db"],
-                    detik_aktif_pita_katak=akt["detik_aktif"],
-                    persen_aktif_pita_katak=akt["persen_aktif"],
-                    status="ok",
-                )
-            if args.perch:
-                jendela = perch.analisis(x, sr)
-                agg = np.max(np.stack([j.logit for j in jendela]), axis=0)
-                baris["tebakan_perch_belum_terverifikasi"] = perch.teratas(agg, 1)[0]["label"]
-                with _atomik(emb_path) as sementara:
-                    np.savez_compressed(
-                        sementara,
-                        embedding=np.stack([j.embedding for j in jendela]).astype(np.float16),
-                        mulai_s=np.array([j.mulai_s for j in jendela]),
+                if x is None or lama.get("status") != "ok":
+                    asli, sr_asli = muat_audio(path)
+                    h = pipeline.jalankan(asli, sr_asli)
+                    if x is None:
+                        with _atomik(tujuan) as sementara:
+                            simpan_wav(sementara, h.audio, h.sr)
+                        x, sr = muat_audio(tujuan)
+                    seg = deteksi.segmen_aktif(x, sr)
+                    akt = deteksi.ringkas_aktivitas(seg, len(x) / sr)
+                    ks, kd, kj = "katak (2400–3800 Hz)", "dengung (900–1900 Hz)", "jangkrik (4300–6600 Hz)"
+                    baris.update(
+                        durasi_s=round(len(x) / sr, 2),
+                        puncak_dinotch_hz=" ".join(f"{p.frekuensi_hz:.0f}" for p in h.puncak),
+                        gain_db=h.gain_db,
+                        katak_mean_db_sebelum=h.level_sebelum[ks]["mean_db"],
+                        katak_mean_db_sesudah=h.level_sesudah[ks]["mean_db"],
+                        dengung_mean_db_sebelum=h.level_sebelum[kd]["mean_db"],
+                        dengung_mean_db_sesudah=h.level_sesudah[kd]["mean_db"],
+                        jangkrik_mean_db_sebelum=h.level_sebelum[kj]["mean_db"],
+                        jangkrik_mean_db_sesudah=h.level_sesudah[kj]["mean_db"],
+                        detik_aktif_pita_katak=akt["detik_aktif"],
+                        persen_aktif_pita_katak=akt["persen_aktif"],
+                        status="ok",
                     )
-            baris["status"] = "ok"
-        except Exception:
-            kosong = path.stat().st_size == 0 if path.exists() else False
-            baris["status"] = ("gagal: file kosong, tidak dapat dibaca" if kosong else
-                               "gagal: audio tidak dapat dibaca atau diproses; periksa file rusak, izin tulis, dan model Perch bila digunakan")
-            gagal += 1
-        semua_baris[_kunci(baris)] = baris
-        _simpan_csv(path_csv, semua_baris)
-        n += 1
-        print(f"[{n}] {par}/{path.name} {baris['status']}", file=sys.stderr)
-        if args.batas and n >= args.batas:
-            break
+                if args.perch:
+                    jendela = perch.analisis(x, sr)
+                    agg = np.max(np.stack([j.logit for j in jendela]), axis=0)
+                    baris["tebakan_perch_belum_terverifikasi"] = perch.teratas(agg, 1)[0]["label"]
+                    with _atomik(emb_path) as sementara:
+                        np.savez_compressed(
+                            sementara,
+                            embedding=np.stack([j.embedding for j in jendela]).astype(np.float16),
+                            mulai_s=np.array([j.mulai_s for j in jendela]),
+                        )
+                baris["status"] = "ok"
+            except Exception:
+                kosong = path.stat().st_size == 0 if path.exists() else False
+                baris["status"] = ("gagal: file kosong, tidak dapat dibaca" if kosong else
+                                   "gagal: audio tidak dapat dibaca atau diproses; periksa file rusak, izin tulis, dan model Perch bila digunakan")
+                gagal += 1
+            catat(baris)
+            n += 1
+            print(f"[{n}] {par}/{path.name} {baris['status']}", file=sys.stderr)
+            if args.batas and n >= args.batas:
+                break
     if not ditemukan:
         print(f"Tidak ada file WAV/FLAC dengan nama bertanggal dalam jendela {args.jam} di {args.masukan}.", file=sys.stderr)
         return 0

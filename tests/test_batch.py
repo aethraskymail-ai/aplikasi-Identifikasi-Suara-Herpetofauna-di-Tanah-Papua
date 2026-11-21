@@ -186,3 +186,50 @@ def test_legacy_csv_migrated_and_deduplicated(drive):
     assert run(drive) == 0
     assert len(rows(out)) == 1
     assert rows(out)[0]["tebakan_perch_belum_terverifikasi"] == "Tebakan lama"
+
+
+def test_csv_compacted_only_at_start_and_end(drive, monkeypatch):
+    _, path, out = drive
+    for minute in ("180000", "183000"):
+        path.with_name(f"20261118_{minute}.WAV").write_bytes(path.read_bytes())
+    original = batch._simpan_csv
+    compactions = []
+
+    def compact(path_csv, data):
+        compactions.append(len(data))
+        original(path_csv, data)
+
+    monkeypatch.setattr(batch, "_simpan_csv", compact)
+    assert run(drive) == 0
+    assert compactions == [0, 3]
+    assert len(rows(out)) == 3
+
+
+def test_retry_compacted_on_interrupt(drive, monkeypatch, capsys):
+    _, path, out = drive
+    path.write_bytes(b"")
+    assert run(drive) == 1
+    original = batch.cari_file
+
+    def interrupt_after_file(*args):
+        yield from original(*args)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(batch, "cari_file", interrupt_after_file)
+    assert run(drive) == 130
+    assert len(rows(out)) == 1
+    assert "Progres tersimpan" in capsys.readouterr().err
+
+
+def test_journal_last_row_wins_and_incomplete_row_ignored(drive):
+    _, _, out = drive
+    assert run(drive) == 0
+    row = rows(out)[0]
+    row["status"] = "gagal: tidak dapat dibaca"
+    with (out / "ringkasan.csv").open("a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=batch.KOLOM)
+        writer.writerow(row)
+        f.write("PAR001,2026-11-18,20261118_173000.WAV")
+    assert batch._baca_csv(out / "ringkasan.csv")[batch._kunci(row)]["status"] == row["status"]
+    assert run(drive) == 0
+    assert len(rows(out)) == 1 and rows(out)[0]["status"] == "ok"

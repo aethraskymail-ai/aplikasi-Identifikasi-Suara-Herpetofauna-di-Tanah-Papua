@@ -65,7 +65,10 @@ pesan menyatakannya secara eksplisit. CONFIG.TXT disalin, bukan dibaca untuk kor
 jam pada nama file dianggap sudah waktu lokal WIT.
 
 Tekan Ctrl-C untuk berhenti, lalu jalankan kembali **perintah yang sama** untuk melanjutkan.
-WAV, embedding, dan CSV ditulis melalui file sementara lalu diganti secara atomik.
+WAV dan embedding ditulis melalui file sementara lalu diganti secara atomik.
+CSV dipadatkan secara atomik saat mulai dan selesai (juga saat Ctrl-C); selama proses,
+satu baris ditambahkan dan di-flush per file. Bila proses terputus paksa, baris terakhir
+per file berlaku dan duplikasi dibersihkan saat mulai lagi, tanpa menulis ulang seluruh CSV per file.
 Hasil dilewati hanya bila WAV dan baris CSV sukses sudah ada (serta embedding dan tebakan
 bila memakai `--perch`). WAV yang sudah ada dipakai kembali untuk melengkapi hasil yang kurang;
 ringkasan penyaringan yang belum tercatat dihitung ulang dari sumber, tanpa menimpa WAV yang valid.
