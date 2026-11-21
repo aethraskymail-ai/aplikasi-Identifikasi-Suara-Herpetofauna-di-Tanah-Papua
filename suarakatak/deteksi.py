@@ -43,7 +43,7 @@ def segmen_aktif(
     return [
         {"mulai_s": round(max(0.0, s), 2), "akhir_s": round(a, 2), "snr_db": round(float(snr), 1)}
         for s, a, snr in segmen
-        if a - s >= min_durasi_s
+        if a - s >= min_durasi_s - 1e-9
     ]
 
 

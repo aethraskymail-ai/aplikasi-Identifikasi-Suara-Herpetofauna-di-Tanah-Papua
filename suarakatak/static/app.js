@@ -1,6 +1,8 @@
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n, d = 1) => (n == null ? "–" : Number(n).toLocaleString("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d }));
+// Dibulatkan ke bawah agar skor beberapa kelas tidak berjumlah lebih dari 100%.
+const persenSkor = (s) => (s > 0 && s < 0.01 ? "<1%" : `${Math.floor(s * 100 + 1e-9)}%`);
 let aktifId = null;
 let semuaLabel = [];
 let jumlahLabel = {};
@@ -61,7 +63,7 @@ async function muatDaftar() {
 
 function saran(list) {
   if (!list || !list.length) return '<span class="muted">–</span>';
-  return `<div class="saran">${list.map((p) => `<div>${esc(p.label.replace(/_/g, " "))} <span class="muted mono">${fmt(p.skor * 100, 0)}%</span></div>`).join("")}</div>`;
+  return `<div class="saran">${list.map((p) => `<div>${esc(p.label.replace(/_/g, " "))} <span class="muted mono">${persenSkor(p.skor)}</span></div>`).join("")}</div>`;
 }
 
 function tabelLevel(d) {
