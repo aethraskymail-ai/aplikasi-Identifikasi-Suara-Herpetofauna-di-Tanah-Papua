@@ -1,7 +1,7 @@
 """Metode penyaringan yang sudah tervalidasi (catatan "Pipeline Audio Herpet — Drive I:\\PAR").
 
 1. highpass 2100 Hz ×2 + lowpass 8000 Hz ×2 (biquad 2-kutub, Q 0,707, sama dengan default ffmpeg).
-2. FFT rata-rata per file → puncak nada sempit di luar pita katak 2,4–3,8 kHz.
+2. FFT rata-rata per file → puncak nada sempit persisten di luar pita katak 2,4–3,8 kHz.
 3. Notch `equalizer` tajam bertingkat per puncak (g -40..-50 dB, 3 lebar berbeda).
 4. Normalisasi berbasis puncak: gain = -2 dB − max_volume. Keluaran 48 kHz PCM s16.
 5. Verifikasi level per pita sebelum/sesudah (bandpass FFT tajam).
@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 
 import numpy as np
-from scipy.signal import find_peaks, medfilt, sosfilt, welch
+from scipy.signal import find_peaks, medfilt, sosfilt, spectrogram, welch
 
 PITA_KATAK = (2400.0, 3800.0)
 HIGHPASS_HZ = 2100.0
@@ -95,7 +95,14 @@ def cari_puncak_gangguan(
     tonjolan_min_db: float = 8.0,
     maks_puncak: int = 16,
 ) -> list[Puncak]:
-    """Nada sempit di luar pita katak, dideteksi ulang per file (tidak di-hardcode)."""
+    """Nada sempit di luar pita katak yang hadir pada ≥90% bingkai 100 ms.
+
+    Hadir = ≥8 dB di atas median spektral lokal dan tidak lebih dari 10 dB
+    di bawah persentil 90 level nada itu sendiri. Pulsa/jeda bukan drone.
+    """
+    nper = int(sr * 0.1)
+    if len(x) < 3 * nper:
+        return []
     f, db = spektrum_rata(x, sr)
     df = f[1] - f[0]
     kernel = int(round(150.0 / df)) | 1
@@ -103,12 +110,20 @@ def cari_puncak_gangguan(
     menonjol = db - dasar
     lebar_maks = max(2, int(round(40.0 / df)))
     idx, _ = find_peaks(menonjol, height=tonjolan_min_db, width=(None, lebar_maks), distance=max(1, int(8 / df)))
+    ft, _, daya = spectrogram(x, fs=sr, window="hann", nperseg=nper, noverlap=nper // 2)
+    db_waktu = 10 * np.log10(daya + 1e-20)
     hasil = []
     for i in idx:
         fi = float(f[i])
         if fi < f_min or fi > min(f_max, 0.45 * sr):
             continue
         if PITA_KATAK[0] - JARAK_AMAN_PITA_HZ <= fi <= PITA_KATAK[1] + JARAK_AMAN_PITA_HZ:
+            continue
+        nada = db_waktu[np.abs(ft - fi) <= 10].max(axis=0)
+        sekitar = (np.abs(ft - fi) >= 30) & (np.abs(ft - fi) <= 100)
+        lantai = np.median(db_waktu[sekitar], axis=0)
+        hadir = (nada - lantai >= tonjolan_min_db) & (nada >= np.percentile(nada, 90) - 10)
+        if np.mean(hadir) < 0.9:
             continue
         hasil.append(Puncak(round(fi, 1), round(float(menonjol[i]), 1), round(float(db[i]), 1)))
     hasil.sort(key=lambda p: p.level_db, reverse=True)

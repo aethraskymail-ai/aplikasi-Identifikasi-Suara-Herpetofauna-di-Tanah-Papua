@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from suarakatak import contoh, deteksi, pipeline
 from suarakatak.audio import info_nama_file
@@ -42,6 +43,32 @@ def test_equalizer_notch_tepat_di_frekuensi():
     x = np.sin(2 * np.pi * 1500 * t).astype(np.float32)
     y = pipeline.notch_bertingkat(x, sr, [pipeline.Puncak(1500.0, 30, -10)])
     assert pipeline.max_volume_db(y[sr // 2 :]) < -60
+
+
+@pytest.mark.parametrize("frekuensi", [1500, 2150])
+def test_notch_hanya_nada_persisten(monkeypatch, frekuensi):
+    monkeypatch.setattr(pipeline, "JARAK_AMAN_PITA_HZ", 60.0)
+    sr = 48000
+    t = np.arange(sr * 6) / sr
+    noise = 0.002 * np.random.default_rng(42).standard_normal(len(t))
+    nada = 0.1 * np.sin(2 * np.pi * frekuensi * t)
+    pulsa = noise + nada * ((t % 0.55) < 0.3)
+    kontinu = noise + nada
+    p_pulsa = pipeline.cari_puncak_gangguan(pulsa, sr)
+    p_kontinu = pipeline.cari_puncak_gangguan(kontinu, sr)
+    assert not any(abs(p.frekuensi_hz - frekuensi) < 20 for p in p_pulsa)
+    assert any(abs(p.frekuensi_hz - frekuensi) < 6 for p in p_kontinu)
+    pita = (frekuensi - 20, frekuensi + 20)
+    y_pulsa = pipeline.notch_bertingkat(pulsa, sr, p_pulsa)
+    y_kontinu = pipeline.notch_bertingkat(kontinu, sr, p_kontinu)
+    level = lambda x: pipeline.level_pita(x[sr:], sr, pita)["mean_db"]
+    assert abs(level(y_pulsa) - level(pulsa)) < 1
+    assert level(y_kontinu) < level(kontinu) - 30
+
+
+@pytest.mark.parametrize("durasi", [0, 0.1, 1])
+def test_notch_tanpa_bukti_nada(durasi):
+    assert pipeline.cari_puncak_gangguan(np.zeros(int(48000 * durasi)), 48000) == []
 
 
 def test_notch_dekat_tepi_tidak_memotong_pita_katak():
