@@ -24,6 +24,24 @@ def test_aktivitas_panggilan_memenuhi_rekaman_pendek():
     assert deteksi.segmen_aktif(np.zeros_like(t), sr) == []
 
 
+def test_mode_rendah_mempertahankan_panggilan_800_hz():
+    sr = 48000
+    t = np.arange(sr * 4) / sr
+    x = (0.1 * np.sin(2 * np.pi * 800 * t) * ((t % 0.8) < 0.4)).astype(np.float32)
+    standar = pipeline.jalankan(x, sr)
+    eksplisit = pipeline.jalankan(x, sr, mode_rendah=False)
+    rendah = pipeline.jalankan(x, sr, mode_rendah=True)
+    np.testing.assert_array_equal(standar.audio, eksplisit.audio)
+    assert pipeline.HIGHPASS_HZ == 2100
+    assert pipeline.PITA_KATAK == (2400, 3800)
+    assert not any(500 <= p.frekuensi_hz <= 3800 for p in rendah.puncak)
+    level = lambda y: pipeline.level_pita(y, sr, (750, 850))["mean_db"]
+    mentah = lambda h: h.audio / 10 ** (h.gain_db / 20)
+    assert abs(level(mentah(rendah)) - level(x)) < 3
+    assert level(mentah(standar)) < level(x) - 25
+    assert deteksi.segmen_aktif(rendah.audio, sr, pita=pipeline.PITA_RENDAH)
+
+
 def test_pipeline_meredam_gangguan_dan_menjaga_pita_katak():
     x = contoh.buat(durasi_s=20)
     h = pipeline.jalankan(x, contoh.SR)

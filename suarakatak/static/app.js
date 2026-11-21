@@ -72,6 +72,7 @@ async function buka(id) {
       : '<span class="status-warn">di luar jendela 17:30–21:00</span>';
   const puncak = d.penyaringan.puncak_dinotch;
   const adaMulai = d.jendela.length > 0;
+  const pita = d.mode_rendah ? "0,5–3,8 kHz" : "2,4–3,8 kHz";
   $("#detail").innerHTML = `
     <div class="baris" style="justify-content:space-between">
       <h2 style="margin:0;word-break:break-all">${esc(d.nama_file)}</h2>
@@ -80,10 +81,11 @@ async function buka(id) {
     <div class="info">
       <span><b>Durasi</b> ${fmt(d.durasi_s)} dtk</span>
       <span><b>Sample rate</b> ${d.sample_rate_asli} Hz</span>
+      <span><b>Mode</b> ${d.mode_rendah ? "Frekuensi rendah · highpass 400 Hz · bukan metode tervalidasi" : "Standar · highpass 2100 Hz"}</span>
       ${am.waktu ? `<span><b>Waktu</b> ${esc(am.waktu)} WIT</span>` : ""}
       ${am.par ? `<span><b>Lokasi</b> ${esc(am.par)}</span>` : ""}
       <span>${jendela}</span>
-      <span><b>Aktivitas pita katak</b> ${fmt(d.aktivitas.detik_aktif)} dtk (${fmt(d.aktivitas.persen_aktif)}%), ${d.aktivitas.jumlah_segmen} segmen</span>
+      <span><b>Aktivitas pita ${pita}</b> ${fmt(d.aktivitas.detik_aktif)} dtk (${fmt(d.aktivitas.persen_aktif)}%), ${d.aktivitas.jumlah_segmen} segmen</span>
     </div>
     <div class="dua">
       <div><div class="muted">Asli</div><audio id="audio-asli" controls preload="metadata" src="/api/rekaman/${id}/audio/asli"></audio>
@@ -99,7 +101,7 @@ async function buka(id) {
     ${adaMulai ? `<p class="status-warn">Saran model — belum diverifikasi; skor relatif, bukan probabilitas keberadaan.</p>
     <p class="muted">Kolom Perch = saran model global (pembanding); skor dihitung relatif terhadap kumpulan kelas masing-masing kolom. ${d.model_kustom_aktif ? "Kolom model kustom = saran model dari label Anda, belum diverifikasi." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
     <div class="gulir"><table class="tabel" id="tabel-jendela"><thead><tr>
-      <th>Waktu</th><th>Aktivitas 2,4–3,8 kHz</th><th>Model kustom</th><th>Perch: kelas amfibi saja</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
+      <th>Waktu</th><th>Aktivitas ${pita}</th><th>Model kustom</th><th>Perch: kelas amfibi saja</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
       ${d.jendela
         .map(
           (j) => `<tr data-idx="${j.idx}">
@@ -165,6 +167,7 @@ async function unggah(files) {
     const fd = new FormData();
     fd.append("file", f);
     fd.append("perch_terfilter", terfilter);
+    fd.append("mode_rendah", $("#mode-rendah").checked);
     try {
       terakhir = await api("/api/analisis", { method: "POST", body: fd });
     } catch (e) {

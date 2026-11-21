@@ -35,8 +35,9 @@ def _folder(rid: str) -> Path:
     return FOLDER_REKAMAN / rid
 
 
-def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool) -> dict:
-    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter)
+def _proses(path_asli: Path, folder: Path, rid: str, nama: str, perch_terfilter: bool,
+            mode_rendah: bool = False) -> dict:
+    ringkasan, jendela = analisis_file(path_asli, folder, nama, perch_terfilter, mode_rendah)
     ringkasan["id"] = rid
     ringkasan["file_asli"] = path_asli.name
     db.simpan_rekaman(rid, nama, ringkasan, jendela)
@@ -55,7 +56,8 @@ def status() -> dict:
 
 
 @app.post("/api/analisis")
-def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) -> dict:
+def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False),
+             mode_rendah: bool = Form(False)) -> dict:
     nama = Path(file.filename or "rekaman.wav").name
     ext = Path(nama).suffix.lower()
     if ext not in EKSTENSI:
@@ -67,7 +69,7 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) 
     with open(path_asli, "wb") as f:
         shutil.copyfileobj(file.file, f)
     try:
-        return _proses(path_asli, folder, rid, nama, perch_terfilter)
+        return _proses(path_asli, folder, rid, nama, perch_terfilter, mode_rendah)
     except Exception as e:
         shutil.rmtree(folder, ignore_errors=True)
         raise HTTPException(422, f"Gagal menganalisis {nama}: {e}") from e

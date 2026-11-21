@@ -17,6 +17,7 @@ import numpy as np
 from scipy.signal import find_peaks, medfilt, sosfilt, spectrogram, welch
 
 PITA_KATAK = (2400.0, 3800.0)
+PITA_RENDAH = (500.0, 3800.0)
 HIGHPASS_HZ = 2100.0
 LOWPASS_HZ = 8000.0
 TARGET_PUNCAK_DB = -2.0
@@ -67,9 +68,9 @@ def biquad_equalizer(f: float, sr: int, lebar_hz: float, gain_db: float) -> np.n
     )
 
 
-def saring_pita(x: np.ndarray, sr: int) -> np.ndarray:
+def saring_pita(x: np.ndarray, sr: int, highpass_hz: float = HIGHPASS_HZ) -> np.ndarray:
     lp = min(LOWPASS_HZ, 0.45 * sr)
-    sos = np.vstack([biquad_highpass(HIGHPASS_HZ, sr)] * 2 + [biquad_lowpass(lp, sr)] * 2)
+    sos = np.vstack([biquad_highpass(highpass_hz, sr)] * 2 + [biquad_lowpass(lp, sr)] * 2)
     return sosfilt(sos, x).astype(np.float32)
 
 
@@ -94,6 +95,7 @@ def cari_puncak_gangguan(
     f_max: float = 7800.0,
     tonjolan_min_db: float = 8.0,
     maks_puncak: int = 16,
+    pita: tuple[float, float] = PITA_KATAK,
 ) -> list[Puncak]:
     """Nada sempit di luar pita katak yang hadir pada ≥90% bingkai 100 ms.
 
@@ -117,7 +119,7 @@ def cari_puncak_gangguan(
         fi = float(f[i])
         if fi < f_min or fi > min(f_max, 0.45 * sr):
             continue
-        if PITA_KATAK[0] - JARAK_AMAN_PITA_HZ <= fi <= PITA_KATAK[1] + JARAK_AMAN_PITA_HZ:
+        if pita[0] - JARAK_AMAN_PITA_HZ <= fi <= pita[1] + JARAK_AMAN_PITA_HZ:
             continue
         nada = db_waktu[np.abs(ft - fi) <= 10].max(axis=0)
         sekitar = (np.abs(ft - fi) >= 30) & (np.abs(ft - fi) <= 100)
@@ -181,15 +183,16 @@ class HasilSaring:
         }
 
 
-def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
+def jalankan(x: np.ndarray, sr: int, mode_rendah: bool = False) -> HasilSaring:
     from .audio import resample
 
     if sr != SR_KELUARAN:
         x = resample(x, sr, SR_KELUARAN)
         sr = SR_KELUARAN
     sebelum = {nama: level_pita(x, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
-    y = saring_pita(x, sr)
-    puncak = cari_puncak_gangguan(y, sr)
+    pita = PITA_RENDAH if mode_rendah else PITA_KATAK
+    y = saring_pita(x, sr, highpass_hz=400.0 if mode_rendah else HIGHPASS_HZ)
+    puncak = cari_puncak_gangguan(y, sr, pita=pita)
     y = notch_bertingkat(y, sr, puncak)
     sesudah_mentah = {nama: level_pita(y, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
     y, gain = normalisasi_puncak(y)
