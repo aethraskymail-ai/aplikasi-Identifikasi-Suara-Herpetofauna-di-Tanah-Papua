@@ -100,7 +100,7 @@ async function buka(id) {
     <div class="gulir">${tabelLevel(d)}</div>
     <p class="muted">${puncak.length} nada gangguan di-notch: ${puncak.map((p) => `${fmt(p.frekuensi_hz, 0)} Hz`).join(", ") || "–"} · gain normalisasi ${fmt(d.penyaringan.gain_normalisasi_db)} dB</p>
     <h3>Jendela 5 detik</h3>
-    ${statusModel(d.model)}
+    <div id="status-model-detail">${statusModel(d.model)}</div>
     ${d.catatan_perch ? `<p class="status-warn">${esc(d.catatan_perch)}</p>` : ""}
     ${adaMulai ? `<p class="muted">Perch = tebakan model global, hanya pembanding, belum terverifikasi. Model kustom = tebakan dari model terakhir yang Anda latih; skor tidak terkalibrasi. Data latih bukan evaluasi independen.</p>
     <div class="gulir"><table class="tabel" id="tabel-jendela"><thead><tr>
@@ -138,6 +138,9 @@ async function buka(id) {
       });
       semuaLabel = Object.keys(r.label);
       inp.classList.toggle("tersimpan", !!inp.value.trim());
+      const st = await api("/api/status");
+      const el = $("#status-model-detail");
+      if (el) el.innerHTML = statusModel(st.model);
       muatDaftar();
     };
     inp.addEventListener("change", simpan);
