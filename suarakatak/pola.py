@@ -92,6 +92,7 @@ def cari_cocok(path_wav: Path, patch: np.ndarray, f_min: float, f_maks: float,
         blok = int(BLOK_S * sr) // HOP * HOP
         tumpang = (w + 4) * HOP + NFFT
         mulai = 0
+        sebelumnya = -1.0
         while mulai < fh.frames:
             fh.seek(mulai)
             x = fh.read(blok + tumpang, dtype="float32", always_2d=True).mean(axis=1)
@@ -103,8 +104,11 @@ def cari_cocok(path_wav: Path, patch: np.ndarray, f_min: float, f_maks: float,
                 raise InputTidakValid("Laju sampel rekaman berbeda dengan templat.")
             r = korelasi_geser(band, patch)
             batas = min(len(r), blok // HOP) if mulai + blok < fh.frames else len(r)
-            puncak, _ = find_peaks(np.concatenate([[-1.0], r[:batas], [-1.0]]), height=ambang)
-            hasil += [((mulai + (k - 1) * HOP) / sr, float(r[k - 1])) for k in puncak]
+            # Tetangga puncak diambil dari blok sebelah agar batas blok tidak membuat puncak palsu.
+            puncak, _ = find_peaks(np.concatenate([[sebelumnya], r, [-1.0]]), height=ambang)
+            hasil += [((mulai + (k - 1) * HOP) / sr, float(r[k - 1])) for k in puncak if k - 1 < batas]
+            if batas:
+                sebelumnya = float(r[batas - 1])
             mulai += blok
     hasil.sort(key=lambda p: -p[1])
     durasi = w * HOP / sr
