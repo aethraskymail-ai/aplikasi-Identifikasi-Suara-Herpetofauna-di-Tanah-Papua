@@ -5,13 +5,33 @@ let aktifId = null;
 let semuaLabel = [];
 
 async function api(url, opt) {
-  const r = await fetch(url, { credentials: "same-origin", ...opt });
-  if (!r.ok) {
-    let msg = r.statusText;
-    try { msg = (await r.json()).detail || msg; } catch (_) {}
-    throw new Error(msg);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15 * 60 * 1000);
+  try {
+    const r = await fetch(url, { credentials: "same-origin", ...opt, signal: controller.signal });
+    if (!r.ok) {
+      let msg = ({
+        413: "File terlalu besar. Pilih rekaman yang lebih kecil atau potong menjadi beberapa bagian.",
+        500: "Server gagal memproses rekaman. Coba lagi nanti.",
+        502: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
+        503: "Server sedang sibuk atau tidak merespons. Coba lagi nanti.",
+        504: "Server terlalu lama merespons. Coba lagi nanti atau gunakan rekaman lebih pendek.",
+      })[r.status] || "Permintaan gagal. Periksa file dan coba lagi.";
+      try {
+        const d = (await r.json()).detail;
+        if (r.status < 500 && typeof d === "string" && d.trim()) msg = d;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return await r.json();
+  } catch (e) {
+    if (controller.signal.aborted) throw new Error("Analisis melebihi batas waktu 15 menit. Coba rekaman yang lebih pendek.");
+    if (e instanceof TypeError) throw new Error("Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi.");
+    if (e instanceof SyntaxError) throw new Error("Balasan server tidak bisa dibaca. Coba lagi nanti.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return r.json();
 }
 
 document.querySelectorAll(".tab").forEach((b) =>
@@ -52,6 +72,7 @@ function tabelLevel(d) {
   return `<table class="tabel"><thead><tr><th>Pita</th><th class="angka">Rata² sebelum</th><th class="angka">Rata² sesudah</th><th class="angka">Perubahan</th></tr></thead><tbody>${Object.keys(p.level_sebelum)
     .map((k) => {
       const a = p.level_sebelum[k].mean_db, b = p.level_sesudah[k].mean_db;
+      if (a == null || b == null) return `<tr><td>${esc(k)}</td><td colspan="3">Tidak bisa dinilai: laju sampel terlalu rendah.</td></tr>`;
       return `<tr><td>${esc(k)}</td><td class="angka">${fmt(a)} dB</td><td class="angka">${fmt(b)} dB</td><td class="angka">${fmt(b - a)} dB</td></tr>`;
     })
     .join("")}</tbody></table>`;
@@ -75,6 +96,7 @@ async function buka(id) {
       <h2 style="margin:0;word-break:break-all">${esc(d.nama_file)}</h2>
       <button class="tombol kecil" id="tombol-hapus">Hapus</button>
     </div>
+    ${(d.peringatan || []).map((pesan) => `<p class="status-warn">${esc(pesan)}</p>`).join("")}
     <div class="info">
       <span><b>Durasi</b> ${fmt(d.durasi_s)} dtk</span>
       <span><b>Sample rate</b> ${d.sample_rate_asli} Hz</span>
@@ -94,7 +116,7 @@ async function buka(id) {
     <p class="muted">${puncak.length} nada gangguan di-notch: ${puncak.map((p) => `${fmt(p.frekuensi_hz, 0)} Hz`).join(", ") || "–"} · gain normalisasi ${fmt(d.penyaringan.gain_normalisasi_db)} dB</p>
     <h3>Jendela 5 detik</h3>
     ${d.catatan_perch ? `<p class="status-warn">${esc(d.catatan_perch)}</p>` : ""}
-    ${adaMulai ? `<p class="muted">Kolom Perch = tebakan langsung model global (pembanding). ${d.model_kustom_aktif ? "Kolom model kustom = hasil model dari label Anda." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
+    ${adaMulai ? `<p class="muted">Saran jenis adalah tebakan model, bukan identifikasi terverifikasi. Periksa rekaman dan beri label secara manual. ${d.model_kustom_aktif ? "Kolom model kustom = hasil model dari label Anda." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
     <div class="gulir"><table class="tabel" id="tabel-jendela"><thead><tr>
       <th>Waktu</th><th>Aktivitas 2,4–3,8 kHz</th><th>Model kustom</th><th>Perch: amfibi teratas</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
       ${d.jendela
@@ -157,19 +179,21 @@ function pasangPemutar() {
 async function unggah(files) {
   const terfilter = $("#perch-terfilter").checked;
   let terakhir = null;
+  const gagal = [];
+  const progres = (pesan) => { $("#progres").textContent = [...gagal, pesan].join("\n"); };
+  $("#progres").style.whiteSpace = "pre-line";
   for (const [i, f] of [...files].entries()) {
-    $("#progres").textContent = `Menganalisis ${i + 1}/${files.length}: ${f.name} …`;
+    progres(`Menganalisis ${i + 1}/${files.length}: ${f.name} …${f.size > 50 * 1024 * 1024 ? " File besar; proses dapat memakan waktu beberapa menit." : ""}`);
     const fd = new FormData();
     fd.append("file", f);
     fd.append("perch_terfilter", terfilter);
     try {
       terakhir = await api("/api/analisis", { method: "POST", body: fd });
     } catch (e) {
-      $("#progres").textContent = `Gagal: ${e.message}`;
-      return;
+      gagal.push(`${f.name} — Gagal: ${e.message}`);
     }
   }
-  $("#progres").textContent = `Selesai: ${files.length} file.`;
+  progres(`Selesai: ${files.length - gagal.length} file berhasil; ${gagal.length} dari ${files.length} file gagal.`);
   if (terakhir) buka(terakhir.id);
 }
 

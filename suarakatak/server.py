@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import os
 import re
 import shutil
@@ -17,13 +18,14 @@ from pydantic import BaseModel
 
 from . import __version__, contoh, perch
 from .analisis import analisis_file
-from .audio import simpan_wav
+from .audio import AudioTidakValid, simpan_wav
 from .klasifikasi import Penyimpanan
 
 DATA_DIR = Path(os.environ.get("SUARAKATAK_DATA", Path.home() / ".suarakatak")).expanduser()
 FOLDER_REKAMAN = DATA_DIR / "rekaman"
 STATIC = Path(__file__).parent / "static"
 EKSTENSI = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"}
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Identifikasi Suara Herpetofauna Tanah Papua", version=__version__)
 db = Penyimpanan(DATA_DIR / "suarakatak.sqlite")
@@ -62,15 +64,21 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) 
         raise HTTPException(400, f"Format {ext or '?'} belum didukung. Pakai WAV/FLAC/MP3/M4A/OGG.")
     rid = uuid.uuid4().hex[:12]
     folder = FOLDER_REKAMAN / rid
-    folder.mkdir(parents=True)
     path_asli = folder / f"asli{ext}"
-    with open(path_asli, "wb") as f:
-        shutil.copyfileobj(file.file, f)
     try:
+        folder.mkdir(parents=True)
+        with open(path_asli, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        if not path_asli.stat().st_size:
+            raise AudioTidakValid("File kosong. Coba salin ulang dari kartu AudioMoth.")
         return _proses(path_asli, folder, rid, nama, perch_terfilter)
     except Exception as e:
+        logger.exception("Analisis unggahan gagal: %s", rid)
+        db.hapus_rekaman(rid)
         shutil.rmtree(folder, ignore_errors=True)
-        raise HTTPException(422, f"Gagal menganalisis {nama}: {e}") from e
+        if isinstance(e, AudioTidakValid):
+            raise HTTPException(422, f"{nama}: {e}") from e
+        raise HTTPException(500, "Analisis gagal karena gangguan server. Coba lagi nanti atau gunakan rekaman lain.") from e
 
 
 @app.post("/api/contoh")
