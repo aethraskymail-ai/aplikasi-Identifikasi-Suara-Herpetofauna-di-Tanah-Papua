@@ -167,7 +167,7 @@ class HasilSaring:
 def jalankan(x: np.ndarray, sr: int) -> HasilSaring:
     from .audio import resample
 
-    if sr != SR_KELUARAN and sr > SR_KELUARAN:
+    if sr != SR_KELUARAN:
         x = resample(x, sr, SR_KELUARAN)
         sr = SR_KELUARAN
     sebelum = {nama: level_pita(x, sr, pita) for nama, pita in PITA_VERIFIKASI.items()}
