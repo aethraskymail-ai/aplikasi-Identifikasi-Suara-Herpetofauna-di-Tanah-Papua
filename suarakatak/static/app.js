@@ -90,6 +90,8 @@ async function buka(id) {
       : '<span class="status-warn">di luar jendela 17:30–21:00</span>';
   const puncak = d.penyaringan.puncak_dinotch;
   const adaMulai = d.jendela.length > 0;
+  const namaAsli = d.nama_file.split(/[\\/]/).pop();
+  const namaDibersihkan = namaAsli.replace(/\.[^.]+$/, "") + "-dibersihkan.wav";
   $("#detail").innerHTML = `
     <div class="baris" style="justify-content:space-between">
       <h2 style="margin:0;word-break:break-all">${esc(d.nama_file)}</h2>
@@ -105,10 +107,10 @@ async function buka(id) {
     </div>
     <div class="dua">
       <div><div class="muted">Asli</div><audio id="audio-asli" controls preload="metadata" src="/api/rekaman/${id}/audio/asli"></audio>
-        <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/asli" download="${esc(d.file_asli || 'rekaman-asli.wav')}">Unduh rekaman asli</a>
+        <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/asli" download="${esc(namaAsli)}">Unduh rekaman asli</a>
         <img class="spek" src="/api/rekaman/${id}/spektrogram/sebelum.png" alt="Spektrogram sebelum"></div>
       <div><div class="muted">Suara yang dibersihkan</div><audio id="audio-terfilter" controls preload="metadata" src="/api/rekaman/${id}/audio/terfilter"></audio>
-        <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/terfilter" download="rekaman-dibersihkan.wav">Unduh suara yang dibersihkan</a>
+        <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/terfilter" download="${esc(namaDibersihkan)}">Unduh suara yang dibersihkan</a>
         <img class="spek" src="/api/rekaman/${id}/spektrogram/sesudah.png" alt="Spektrogram sesudah"></div>
     </div>
     <h3>Verifikasi per pita</h3>
