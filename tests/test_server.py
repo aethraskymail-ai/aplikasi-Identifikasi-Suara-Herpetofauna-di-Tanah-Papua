@@ -103,3 +103,21 @@ def test_ekstensi_tidak_didukung(client):
     assert response.status_code == 400
     assert "belum didukung" in response.json()["detail"]
     assert server.db.daftar_rekaman() == []
+
+
+@pytest.mark.parametrize("rusak,status", [(True, 422), (False, 500)])
+def test_pembersihan_db_gagal_folder_tetap_dihapus(client, monkeypatch, caplog, rusak, status):
+    def gagal_hapus(rid):
+        raise RuntimeError("SQLite hanya baca")
+
+    def gagal_proses(*args):
+        raise RuntimeError("kesalahan internal")
+
+    monkeypatch.setattr(server.db, "hapus_rekaman", gagal_hapus)
+    if not rusak:
+        monkeypatch.setattr(server, "_proses", gagal_proses)
+    response = upload(client, b"" if rusak else wav())
+    assert response.status_code == status
+    assert "SQLite" not in response.text
+    assert "Pembersihan basis data gagal" in caplog.text
+    assert list(server.FOLDER_REKAMAN.iterdir()) == []

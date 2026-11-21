@@ -74,7 +74,10 @@ def analisis(file: UploadFile = File(...), perch_terfilter: bool = Form(False)) 
         return _proses(path_asli, folder, rid, nama, perch_terfilter)
     except Exception as e:
         logger.exception("Analisis unggahan gagal: %s", rid)
-        db.hapus_rekaman(rid)
+        try:
+            db.hapus_rekaman(rid)
+        except Exception:
+            logger.exception("Pembersihan basis data gagal: %s", rid)
         shutil.rmtree(folder, ignore_errors=True)
         if isinstance(e, AudioTidakValid):
             raise HTTPException(422, f"{nama}: {e}") from e
