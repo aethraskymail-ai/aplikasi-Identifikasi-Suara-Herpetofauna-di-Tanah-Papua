@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import pickle
 import sqlite3
 import threading
 import time
 from pathlib import Path
+from datetime import datetime, timezone
 
 import numpy as np
 
@@ -27,10 +30,18 @@ class Penyimpanan:
                   rekaman_id TEXT, idx INTEGER, mulai_s REAL, akhir_s REAL, embedding BLOB,
                   label TEXT, dilabel REAL, PRIMARY KEY (rekaman_id, idx)
                 );
+                CREATE TABLE IF NOT EXISTS model_terlatih (
+                  id INTEGER PRIMARY KEY, model BLOB, info TEXT
+                );
                 """
             )
         self._model = None
         self._model_versi = None
+        with self._db() as db:
+            row = db.execute("SELECT model, info FROM model_terlatih WHERE id=1").fetchone()
+        self._info = json.loads(row["info"]) if row else {}
+        if row:
+            self._model = pickle.loads(row["model"])
 
     def _db(self):
         db = sqlite3.connect(self.path)
@@ -107,42 +118,70 @@ class Penyimpanan:
             ).fetchall()
         return {r["label"]: r["n"] for r in rows}
 
+    @staticmethod
+    def _sidik(x, meta):
+        rows = sorted(zip(meta, x), key=lambda pair: (pair[0]["rekaman_id"], pair[0]["idx"]))
+        h = hashlib.sha256()
+        for m, embedding in rows:
+            h.update(json.dumps([m["rekaman_id"], m["idx"], m["label"]]).encode())
+            h.update(embedding.tobytes())
+        return h.hexdigest()
+
+    def info_model(self) -> dict:
+        x, _, meta = self.data_latih()
+        return {**self._info, "siap": self._model is not None,
+                "usang": bool(self._info) and self._sidik(x, meta) != self._info["sidik"]}
+
+    def data_latih_model(self, rid: str, idx: int) -> bool:
+        return [rid, idx] in self._info.get("jendela_latih", [])
+
     def latih(self) -> dict:
         from sklearn.linear_model import LogisticRegression
-        from sklearn.model_selection import StratifiedKFold, cross_val_score
+        from sklearn.model_selection import StratifiedGroupKFold, cross_val_score
         from sklearn.pipeline import make_pipeline
         from sklearn.preprocessing import StandardScaler
 
-        x, y, _ = self.data_latih()
+        x, y, meta = self.data_latih()
         kelas, jumlah = np.unique(y, return_counts=True) if y else (np.array([]), np.array([]))
         if len(kelas) < 2:
-            self._model = None
             return {"siap": False, "pesan": "Butuh label minimal 2 kelas (mis. satu jenis katak + 'bukan katak').",
                     "kelas": dict(zip(kelas.tolist(), jumlah.tolist()))}
         model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, class_weight="balanced", C=0.5))
         info: dict = {"siap": True, "kelas": dict(zip(kelas.tolist(), jumlah.tolist())), "n": len(y)}
-        lipatan = int(min(5, jumlah.min()))
+        groups = np.array([m["rekaman_id"] for m in meta])
+        rekaman_kelas = {k: len(set(groups[np.array(y) == k])) for k in kelas}
+        info.update({"dilatih_pada": datetime.now(timezone.utc).isoformat(),
+                     "sidik": self._sidik(x, meta),
+                     "jendela_latih": [[m["rekaman_id"], m["idx"]] for m in meta],
+                     "rekaman_per_kelas": rekaman_kelas,
+                     "data_kecil": bool(jumlah.min() < 10 or min(rekaman_kelas.values()) < 3)})
+        lipatan = min(5, min(rekaman_kelas.values()))
+        info["akurasi_cv"] = None
+        info["pesan"] = "CV antarrekaman belum memungkinkan; perlu ≥2 rekaman berbeda per kelas."
         if lipatan >= 2:
-            skor = cross_val_score(model, x, y, cv=StratifiedKFold(lipatan, shuffle=True, random_state=0))
-            info["akurasi_cv"] = round(float(skor.mean()), 3)
-            info["lipatan_cv"] = lipatan
-        else:
-            info["akurasi_cv"] = None
-            info["pesan"] = "Akurasi validasi silang muncul setelah tiap kelas punya ≥2 label."
+            folds = list(StratifiedGroupKFold(lipatan, shuffle=True, random_state=0).split(x, y, groups))
+            if all(len(set(np.array(y)[train])) == len(kelas) and
+                   len(set(np.array(y)[test])) == len(kelas) for train, test in folds):
+                skor = cross_val_score(model, x, y, cv=folds)
+                info["akurasi_cv"] = round(float(skor.mean()), 3)
+                info["lipatan_cv"] = lipatan
+                info["pesan"] = "CV dikelompokkan per rekaman, bukan per jendela."
+        if info["data_kecil"]:
+            info["pesan"] += " Data sedikit (<10 label atau <3 rekaman per kelas): akurasi hanya perkiraan kasar, belum terverifikasi."
         model.fit(x, y)
+        with self._db() as db:
+            db.execute("INSERT OR REPLACE INTO model_terlatih VALUES (1,?,?)",
+                       (pickle.dumps(model), json.dumps(info)))
         self._model = model
+        self._info = info
         return info
 
     def model(self):
-        if self._model is None:
-            x, y, _ = self.data_latih()
-            if len(set(y)) >= 2:
-                self.latih()
         return self._model
 
     def prediksi(self, embedding: np.ndarray, k: int = 3) -> list[list[dict]]:
         model = self.model()
-        if model is None:
+        if model is None or len(embedding) == 0:
             return [[] for _ in range(len(embedding))]
         p = model.predict_proba(embedding)
         kelas = model.classes_

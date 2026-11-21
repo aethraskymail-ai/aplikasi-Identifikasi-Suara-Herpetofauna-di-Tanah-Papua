@@ -49,6 +49,13 @@ function saran(list) {
   return `<div class="saran">${list.map((p) => `<div>${esc(p.label)} <span class="muted mono">${persenSkor(p.skor)}</span></div>`).join("")}</div>`;
 }
 
+function statusModel(r) {
+  if (!r.siap) return '<p class="status-warn">Belum ada model terlatih. Beri label ≥2 kelas, lalu klik Latih model.</p>';
+  return `<p class="${r.usang ? "status-warn" : "muted"}">${r.usang ? "Label berubah sejak model dilatih — latih ulang. " : ""}Model dilatih: ${esc(r.dilatih_pada)} · ${r.n} label, ${Object.keys(r.kelas).length} kelas.</p>
+    <p class="status-warn">Tebakan belum terverifikasi; skor model tidak terkalibrasi, bukan kepastian jenis.${r.data_kecil ? " Data latih sedikit: jangan gunakan sebagai identifikasi terverifikasi." : ""}</p>
+    <p class="muted">CV antarrekaman: ${r.akurasi_cv == null ? "belum tersedia" : fmt(r.akurasi_cv * 100, 0) + "% (" + r.lipatan_cv + " lipatan)"}. ${esc(r.pesan || "")}</p>`;
+}
+
 function tabelLevel(d) {
   const p = d.penyaringan;
   return `<table class="tabel"><thead><tr><th>Pita</th><th class="angka">Rata² sebelum</th><th class="angka">Rata² sesudah</th><th class="angka">Perubahan</th></tr></thead><tbody>${Object.keys(p.level_sebelum)
@@ -95,8 +102,9 @@ async function buka(id) {
     <div class="gulir">${tabelLevel(d)}</div>
     <p class="muted">${puncak.length} nada gangguan di-notch: ${puncak.map((p) => `${fmt(p.frekuensi_hz, 0)} Hz`).join(", ") || "–"} · gain normalisasi ${fmt(d.penyaringan.gain_normalisasi_db)} dB</p>
     <h3>Jendela 5 detik</h3>
+    <div id="status-model-detail">${statusModel(d.model)}</div>
     ${d.catatan_perch ? `<p class="status-warn">${esc(d.catatan_perch)}</p>` : ""}
-    ${adaMulai ? `<p class="muted">Kolom Perch = tebakan langsung model global (pembanding). ${d.model_kustom_aktif ? "Kolom model kustom = hasil model dari label Anda." : "Model kustom aktif setelah ada label ≥2 kelas lalu klik <em>Latih model</em>."}</p>
+    ${adaMulai ? `<p class="muted">Perch = tebakan model global, hanya pembanding, belum terverifikasi. Model kustom = tebakan dari model terakhir yang Anda latih; skor tidak terkalibrasi. Data latih bukan evaluasi independen.</p>
     <div class="gulir"><table class="tabel" id="tabel-jendela"><thead><tr>
       <th>Waktu</th><th>Aktivitas 2,4–3,8 kHz</th><th>Model kustom</th><th>Perch: amfibi teratas</th><th>Perch: semua kelas</th><th>Label Anda</th></tr></thead><tbody>
       ${d.jendela
@@ -104,7 +112,7 @@ async function buka(id) {
           (j) => `<tr data-idx="${j.idx}">
         <td class="mono"><button class="tombol kecil putar" data-a="${j.mulai_s}" data-b="${j.akhir_s}">▶</button> ${fmt(j.mulai_s, 0)}–${fmt(j.akhir_s, 0)} s</td>
         <td><span class="bar"><i style="width:${Math.min(100, j.persen_aktif_pita_katak)}%"></i></span> <span class="mono">${fmt(j.persen_aktif_pita_katak, 0)}%</span></td>
-        <td>${saran(j.model_kustom)}</td>
+        <td>${j.data_latih ? '<strong class="status-warn">Data latih — bukan identifikasi independen</strong>' : ""}${saran(j.model_kustom)}</td>
         <td>${saran(j.perch_amfibi)}</td>
         <td>${saran(j.perch_umum)}</td>
         <td><input class="label ${j.label ? "tersimpan" : ""}" list="daftar-label" value="${esc(j.label || "")}" placeholder="nama jenis / bukan katak"></td>
@@ -132,6 +140,9 @@ async function buka(id) {
       });
       semuaLabel = Object.keys(r.label);
       inp.classList.toggle("tersimpan", !!inp.value.trim());
+      const st = await api("/api/status");
+      const el = $("#status-model-detail");
+      if (el) el.innerHTML = statusModel(st.model);
       muatDaftar();
     };
     inp.addEventListener("change", simpan);
@@ -197,6 +208,15 @@ $("#tombol-contoh").addEventListener("click", async (e) => {
 
 async function muatModel() {
   const s = await muatStatus();
+  $("#hasil-latih").innerHTML = statusModel(s.model);
+  if (!$("#unduh-prediksi")) {
+    const a = document.createElement("a");
+    a.id = "unduh-prediksi";
+    a.className = "tombol";
+    a.href = "/api/prediksi.csv";
+    a.textContent = "Unduh prediksi (CSV)";
+    $("#tombol-latih").parentElement.appendChild(a);
+  }
   const tb = $("#tabel-label tbody");
   const ent = Object.entries(s.label);
   tb.innerHTML = ent.length
@@ -209,15 +229,13 @@ $("#tombol-latih").addEventListener("click", async (e) => {
   $("#hasil-latih").innerHTML = '<p class="muted">Melatih …</p>';
   try {
     const r = await api("/api/latih", { method: "POST" });
-    $("#hasil-latih").innerHTML = r.siap
-      ? `<p class="status-ok">Model siap: ${r.n} label, ${Object.keys(r.kelas).length} kelas. Akurasi validasi silang: ${r.akurasi_cv == null ? "–" : fmt(r.akurasi_cv * 100, 0) + "% (" + r.lipatan_cv + " lipatan)"}.</p>${r.pesan ? `<p class="muted">${esc(r.pesan)}</p>` : ""}`
-      : `<p class="status-warn">${esc(r.pesan)}</p>`;
+    await muatModel();
+    if (!r.siap) $("#hasil-latih").insertAdjacentHTML("beforeend", `<p class="status-warn">${esc(r.pesan)}</p>`);
     if (aktifId) buka(aktifId);
   } catch (err) {
     $("#hasil-latih").innerHTML = `<p class="status-warn">${esc(err.message)}</p>`;
   } finally {
     e.target.disabled = false;
-    muatModel();
   }
 });
 
