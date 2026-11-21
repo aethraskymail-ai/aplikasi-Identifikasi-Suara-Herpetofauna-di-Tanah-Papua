@@ -3,6 +3,7 @@
     python -m suarakatak.batch --masukan I:\\PAR --keluaran I:\\HASIL_EKSTRAKSI\\HASIL [--perch]
 
 - Memilih file berdasarkan jam di nama `YYYYMMDD_HHMMSS.WAV` (default 17:30–21:00).
+- Rekaman harian `PARxxx_YYYY-MM-DD.mp3` diproses utuh; jam tidak diketahui, tanpa seleksi `--jam`.
 - Menulis `HASIL\\<PARxxx>\\<tanggal>\\<file>.WAV` (48 kHz PCM s16) + menyalin `CONFIG.TXT`.
 - Menulis `ringkasan.csv` (level pita sebelum/sesudah, nada yang di-notch, aktivitas pita katak).
 - `--perch`: menambah tebakan Perch dan menyimpan embedding per file ke `embedding/<PAR>/<file>.npz`
@@ -39,10 +40,12 @@ def _jam(s: str) -> time:
 
 def cari_file(masukan: Path, mulai: time, selesai: time):
     for path in sorted(masukan.rglob("*")):
-        if path.suffix.lower() not in {".wav", ".flac"} or not path.is_file():
+        if path.suffix.lower() not in {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aac", ".mpga"} or not path.is_file():
             continue
         info = info_nama_file(path)
-        if info.waktu is None or not dalam_jendela(info.waktu.time(), mulai, selesai):
+        if info.tanggal is None:
+            continue
+        if info.waktu is not None and not dalam_jendela(info.waktu.time(), mulai, selesai):
             continue
         yield path, info
 
@@ -70,7 +73,7 @@ def main(argv=None) -> int:
             w.writeheader()
         for path, info in cari_file(args.masukan, mulai, selesai):
             par = info.par or path.parent.name
-            tanggal = info.waktu.strftime("%Y-%m-%d")
+            tanggal = info.tanggal.isoformat()
             tujuan = args.keluaran / par / tanggal / (path.stem + ".WAV")
             emb_path = args.keluaran / "embedding" / par / (path.stem + ".npz")
             if tujuan.exists() and (not args.perch or emb_path.exists()):
@@ -81,7 +84,9 @@ def main(argv=None) -> int:
             config = next((p for p in path.parents if (p / "CONFIG.TXT").exists()), None)
             if config and not (tujuan.parent / "CONFIG.TXT").exists():
                 shutil.copy2(config / "CONFIG.TXT", tujuan.parent / "CONFIG.TXT")
-            baris = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ")}
+            if info.waktu is None:
+                print(f"{path.name}: jam tidak diketahui; seluruh audio dianalisis (tanpa seleksi --jam).", file=sys.stderr)
+            baris = {"par": par, "tanggal": tanggal, "file": path.name, "waktu": info.waktu.isoformat(sep=" ") if info.waktu else ""}
             try:
                 x, sr = muat_audio(path)
                 h = pipeline.jalankan(x, sr)

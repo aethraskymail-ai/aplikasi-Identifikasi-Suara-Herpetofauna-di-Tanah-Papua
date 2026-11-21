@@ -182,7 +182,7 @@ def ekspor_label():
 @app.get("/api/prediksi.csv")
 def ekspor_prediksi():
     buf = io.StringIO()
-    fields = ["nama_file", "folder_PAR", "waktu_WIT", "mulai_s", "akhir_s", "label_manual",
+    fields = ["nama_file", "folder_PAR", "waktu_WIT", "tanggal", "mulai_s", "akhir_s", "label_manual",
               "tebakan_kustom_belum_terverifikasi", "skor_model_tidak_terkalibrasi", "data_latih",
               "model_dilatih_pada", "model_jumlah_label", "model_kelas", "label_berubah",
               "perch_pembanding_tebakan_belum_terverifikasi", "perch_skor_pembanding"]
@@ -196,7 +196,7 @@ def ekspor_prediksi():
             custom = next(iter(j.get("model_kustom", [])), {})
             perch_top = next(iter(j.get("perch_umum", [])), {})
             w.writerow(dict(zip(fields, [d["nama_file"], am.get("par"), am.get("waktu"),
-                j["mulai_s"], j["akhir_s"], j.get("label"), custom.get("label"), custom.get("skor"),
+                am.get("tanggal"), j["mulai_s"], j["akhir_s"], j.get("label"), custom.get("label"), custom.get("skor"),
                 j.get("data_latih", False), info.get("dilatih_pada"), info.get("n"),
                 json.dumps(info.get("kelas", {}), ensure_ascii=False), info["usang"],
                 perch_top.get("label"), perch_top.get("skor")])))

@@ -9,6 +9,22 @@ import csv
 import io
 
 
+@pytest.mark.parametrize("nama,par,tanggal", [
+    ("PAR002_2026-05-06.mp3", "PAR002", "2026-05-06"),
+    ("PAR003/par003_2026-05-06.mp3", "PAR003", "2026-05-06"),
+    ("PAR024_PAR015_2026-05-13.mp3", "PAR024_PAR015", "2026-05-13"),
+    ("PAR001_2026-02-30.mp3", None, None),
+    ("inconnu.mp3", None, None),
+    ("", None, None),
+])
+def test_metadata_harian(nama, par, tanggal):
+    info = info_nama_file(nama)
+    assert info.par == par
+    assert (info.tanggal.isoformat() if info.tanggal else None) == tanggal
+    assert info.waktu is None
+    assert info.dalam_jendela is None
+
+
 def penyimpanan(tmp_path, recordings=1):
     db = Penyimpanan(tmp_path / "test.sqlite")
     for r in range(recordings):

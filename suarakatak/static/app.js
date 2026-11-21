@@ -114,6 +114,7 @@ async function buka(id) {
       <span><b>Durasi</b> ${fmt(d.durasi_s)} dtk</span>
       <span><b>Sample rate</b> ${d.sample_rate_asli} Hz</span>
       ${am.waktu ? `<span><b>Waktu</b> ${esc(am.waktu)} WIT</span>` : ""}
+      ${!am.waktu && am.tanggal ? `<span><b>Tanggal</b> ${esc(am.tanggal)} (jam tidak diketahui)</span>` : ""}
       ${am.par ? `<span><b>Lokasi</b> ${esc(am.par)}</span>` : ""}
       <span>${jendela}</span>
       <span><b>Aktivitas pita katak</b> ${fmt(d.aktivitas.detik_aktif)} dtk (${fmt(d.aktivitas.persen_aktif)}%), ${d.aktivitas.jumlah_segmen} segmen</span>

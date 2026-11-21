@@ -51,6 +51,8 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
     if tidak_terukur:
         peringatan.append(f"Laju sampel {sr} Hz: frekuensi di atas {sr / 2:g} Hz tidak terekam; pita {', '.join(tidak_terukur)} tidak bisa dinilai sepenuhnya. Gunakan rekaman dengan laju sampel lebih tinggi.")
     info = info_nama_file(nama_metadata or nama_file)
+    if info.tanggal and info.waktu is None:
+        peringatan.append("Rekaman harian: jam mulai tidak diketahui; jendela 17:30–21:00 tidak dapat dinilai. Seluruh audio dianalisis.")
     hasil = pipeline.jalankan(x, sr)
     simpan_wav(folder / "terfilter.wav", hasil.audio, hasil.sr)
     gambar_spektrogram(x, sr, folder / "sebelum.png", "Sebelum penyaringan")
@@ -74,6 +76,7 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
         "sample_rate_asli": sr,
         "peringatan": peringatan,
         "audiomoth": {
+            "tanggal": info.tanggal.isoformat() if info.tanggal else None,
             "waktu": info.waktu.isoformat(sep=" ") if info.waktu else None,
             "dalam_jendela_1730_2100": info.dalam_jendela,
             "par": info.par,

@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import date, datetime, time
 from pathlib import Path
 
 import numpy as np
@@ -28,20 +28,27 @@ class InfoAudioMoth:
     waktu: datetime | None
     dalam_jendela: bool | None
     par: str | None
+    tanggal: date | None = None
 
 
 def info_nama_file(path: str | Path) -> InfoAudioMoth:
-    """`YYYYMMDD_HHMMSS.WAV` (waktu lokal WIT) dan folder `PARxxx` bila ada."""
+    """Nama AudioMoth (WIT) atau rekaman harian PAR tanpa mengasumsikan jam mulai."""
     p = Path(path)
-    par = next((part for part in reversed(p.parts) if re.fullmatch(r"PAR\d{3}", part, re.I)), None)
+    par = next((part for part in reversed(p.parts) if re.fullmatch(r"PAR\d{3}(?:_PAR\d{3})*", part, re.I)), None)
     m = AUDIOMOTH_NAME.search(p.stem)
     if not m:
+        harian = re.fullmatch(r"(PAR\d{3}(?:_PAR\d{3})*)_(\d{4}-\d{2}-\d{2})", p.stem, re.I)
+        if harian:
+            try:
+                return InfoAudioMoth(None, None, par or harian[1].upper(), date.fromisoformat(harian[2]))
+            except ValueError:
+                pass
         return InfoAudioMoth(None, None, par)
     try:
         waktu = datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S")
     except ValueError:
         return InfoAudioMoth(None, None, par)
-    return InfoAudioMoth(waktu, dalam_jendela(waktu.time()), par)
+    return InfoAudioMoth(waktu, dalam_jendela(waktu.time()), par, waktu.date())
 
 
 def dalam_jendela(t: time, mulai: time = JENDELA_MULAI, selesai: time = JENDELA_SELESAI) -> bool:
