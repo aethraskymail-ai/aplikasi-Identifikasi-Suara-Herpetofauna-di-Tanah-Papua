@@ -553,7 +553,8 @@ async function muatCocok(tid) {
     const item = b.closest(".item-cocok");
     if (b.dataset.aksi === "putar") {
       const audio = $("#audio-cocok"), src = `/api/rekaman/${b.dataset.rid}/audio/terfilter`;
-      if (!audio.src.endsWith(src)) { audio.src = src; await new Promise((ok) => audio.addEventListener("loadedmetadata", ok, { once: true })); }
+      if (!audio.src.endsWith(src)) audio.src = src;
+      // play() memulai pemuatan meski preload="none"; currentTime menyimpan posisi awal.
       putarPotongan(audio, Math.max(0, +b.dataset.a - 0.3), +b.dataset.b + 0.3);
       return;
     }
