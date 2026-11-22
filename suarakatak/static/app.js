@@ -52,7 +52,12 @@ async function api(url, opt) {
 
 document.querySelectorAll(".tab").forEach((b) =>
   b.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("aktif", x === b));
+    document.querySelectorAll(".tab").forEach((x) => {
+      x.classList.toggle("aktif", x === b);
+      if (x === b) x.setAttribute("aria-current", "page");
+      else x.removeAttribute("aria-current");
+    });
+    $("#judul-tab").textContent = b.textContent.replace(/[▥⌘≋◈▤↗]/g, "").trim();
     document.querySelectorAll("main > section").forEach((s) => (s.hidden = s.id !== "tab-" + b.dataset.tab));
     if (b.dataset.tab === "model") muatModel();
     if (b.dataset.tab === "pola") muatPola().catch((e) => ($("#daftar-templat").innerHTML = `<p class="status-warn">${esc(e.message)}</p>`));
@@ -71,6 +76,7 @@ async function muatStatus() {
 
 async function muatDaftar() {
   const rows = await api("/api/rekaman");
+  $("#jumlah-rekaman").textContent = `${rows.length} rekaman`;
   const ul = $("#daftar");
   ul.innerHTML = rows.length ? "" : '<li class="muted">Belum ada rekaman.</li>';
   $("#cara-pakai").hidden = rows.length > 0;
