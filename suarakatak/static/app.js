@@ -327,7 +327,8 @@ const zona = $("#zona-unggah");
 zona.addEventListener("drop", (e) => e.dataTransfer.files.length && unggah(e.dataTransfer.files));
 
 $("#tombol-contoh").addEventListener("click", async (e) => {
-  e.target.disabled = true;
+  const tombol = e.currentTarget;
+  tombol.disabled = true;
   $("#progres").textContent = "Membuat dan menganalisis rekaman contoh … (pertama kali bisa ±30 detik untuk memuat Perch)";
   try {
     const d = await api("/api/contoh", { method: "POST" });
@@ -336,7 +337,7 @@ $("#tombol-contoh").addEventListener("click", async (e) => {
   } catch (err) {
     $("#progres").textContent = "Contoh belum bisa dibuka. Coba lagi nanti atau unggah file WAV Anda sendiri.";
   } finally {
-    e.target.disabled = false;
+    tombol.disabled = false;
   }
 });
 
