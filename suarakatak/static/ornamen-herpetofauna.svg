@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 420">
+  <!-- Ilustrasi garis orisinal untuk Suara Katak Papua, bukan motif adat. -->
+  <defs>
+    <symbol id="katak" viewBox="0 0 160 120">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M55 38C47 24 51 15 62 16c8 0 12 8 18 8s10-8 18-8c11-1 15 8 7 22 13 15 13 39-1 50-13 10-35 10-48 0-14-11-14-35-1-50Z"/>
+        <path d="M55 38q25 14 50 0M62 48q18 10 36 0M62 59q-5 16 7 26m29-26q5 16-7 26M69 85q11 5 22 0"/>
+        <ellipse cx="62" cy="28" rx="5" ry="6"/><ellipse cx="98" cy="28" rx="5" ry="6"/>
+        <path d="M62 24v8m36-8v8M52 49 33 39 20 54 36 65 46 59M108 49l19-10 13 15-16 11-10-6M52 74Q29 54 22 71q-8 18 24 30L60 91M108 74q23-20 30-3 8 18-24 30l-14-10M43 97 30 108m-3-8 3 8-9 1m9-1-2 8m102-16-3 8 9 1m-9-1 2 8m-12-19 10 11M20 54l-9-2m9 2-4-9m4 9-5 8m125-8 9-2m-9 2 4-9m-4 9 5 8"/>
+        <path d="m29 72 12 11m-13-4 12 10m91-17-12 11m13-4-12 10M70 59l3 5m14-5 3 5m-14 8 3 4m7 2 2 4" opacity=".65"/>
+        <circle cx="80" cy="50" r="1"/><circle cx="65" cy="68" r="1"/><circle cx="96" cy="72" r="1"/>
+      </g>
+    </symbol>
+    <symbol id="cecak" viewBox="0 0 160 160">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M68 35Q56 22 67 12q13-10 26 0 11 10-1 23 13 24 0 51-8 17-5 31 3 17 21 19 13 1 18-10-1 21-24 18-33-4-29-38 1-9-6-20-13-27 1-51Z"/>
+        <path d="M69 22h2m18 0h2M72 32q8 4 16 0M80 40v49m-7-38 7 4 7-4m-14 13 7 4 7-4m-14 13 7 4 7-4M67 43 49 37 37 50m56-7 18-6 12 13M65 76 48 89 35 80m60-4 17 13 13-9M37 50l-10 1m10-1-5-8m5 8 1 9m85-9 10 1m-10-1 5-8m-5 8-1 9M35 80l-10-1m10 1-5 8m5-8 3-8m87 8 10-1m-10 1 5 8m-5-8-3-8"/>
+        <path d="m68 50-4 5m4 9-4 5m29-19 4 5m-4 9 4 5M79 103q-3 31 24 36" opacity=".6"/>
+      </g>
+    </symbol>
+    <symbol id="jejak" viewBox="0 0 100 120">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m30 47-12-9m12 9-3-17m3 17 10-14m-10 14 14-2m-14 2 3 13m34 32-12-9m12 9-3-17m3 17 10-14m-10 14 14-2m-14 2 3 13"/>
+        <circle cx="16" cy="37" r="3"/><circle cx="27" cy="27" r="3"/><circle cx="42" cy="31" r="3"/><circle cx="47" cy="45" r="3"/>
+        <circle cx="53" cy="82" r="3"/><circle cx="64" cy="72" r="3"/><circle cx="79" cy="76" r="3"/><circle cx="84" cy="90" r="3"/>
+      </g>
+    </symbol>
+    <symbol id="pakis" viewBox="0 0 100 160">
+      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+        <path d="M24 150Q29 65 76 12M31 112Q3 103 9 82q21 5 22 30Zm4-17Q9 81 20 61q19 8 15 34Zm8-20Q22 60 34 43q18 9 9 32Zm10-19Q38 40 51 26q13 11 2 30Zm11-19Q56 20 70 13q8 11-6 24ZM31 114q30 6 42-17-22-9-42 17Zm6-20q32 3 41-19-24-6-41 19Zm9-20q29-1 36-21-23-3-36 21Zm10-19q26-4 29-21-21-1-29 21Z"/>
+      </g>
+    </symbol>
+  </defs>
+  <g color="#61816a" opacity=".13">
+    <use href="#katak" x="25" y="24" width="145" height="109" transform="rotate(-18 98 79)"/>
+    <use href="#cecak" x="352" y="219" width="135" height="135" transform="rotate(24 420 287)"/>
+    <use href="#jejak" x="234" y="80" width="75" height="90" transform="rotate(27 270 125)"/>
+    <use href="#jejak" x="81" y="272" width="60" height="72" transform="rotate(-20 111 308)"/>
+    <use href="#pakis" x="425" y="22" width="82" height="131"/>
+    <use href="#pakis" x="225" y="250" width="65" height="104" transform="rotate(45 258 302)"/>
+    <path d="M170 215q40-14 78 3m57-178q26-10 43-4M19 225l9-4m-3 14 9-4m466 163 9-4" fill="none" stroke="currentColor" stroke-width="1"/>
+  </g>
+</svg>

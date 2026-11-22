@@ -138,8 +138,8 @@ button, input, select, summary, a { -webkit-tap-highlight-color: transparent; }
 main { padding: 32px 42px 0; max-width: 1520px; }
 main > section { min-width: 0; }
 .hero { position: relative; isolation: isolate; overflow: hidden; min-height: 335px; border-radius: 18px; background: #163a2c; color: #f6f8ee; }
-.hero::before { content: ""; position: absolute; z-index: -2; inset: 0 0 0 35%; background: url('/static/katak-latar.webp') center 43% / cover no-repeat; }
-.hero::after { content: ""; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #163a2c 0%, #163a2c 28%, #163a2ce6 38%, #163a2c00 72%), linear-gradient(0deg, #10271bd9, transparent 40%); }
+.hero::before { content: ""; position: absolute; z-index: -2; inset: 0 0 0 28%; background: url('/static/katak-latar.webp') center 30% / cover no-repeat; mask-image: linear-gradient(90deg, transparent, #0003 12%, #0008 28%, #000d 46%, #000 65%); }
+.hero::after { content: ""; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #163a2c 0%, #163a2ced 18%, #163a2cb3 32%, #163a2c66 46%, #163a2c1a 62%, transparent 78%), linear-gradient(0deg, #10271be6, #10271b40 24%, transparent 55%); }
 .hero-content { position: relative; padding: 32px 36px 36px; max-width: 59%; }
 .eyebrow { margin: 0 0 8px; font-size: 9px; font-weight: 650; letter-spacing: 1.8px; }
 .hero .eyebrow { color: #e0ebbe; font-size: 8px; letter-spacing: 1.4px; }
@@ -218,6 +218,23 @@ input.label, .isian input, select { padding: 8px; border-color: #b6c5b7; backgro
 .prosa { line-height: 1.9; }
 .prosa h2:not(:first-child) { margin-top: 30px; }
 .grid-templat:empty::after { content: "Belum ada templat. Buat templat dari spektrogram di tab Analisis."; color: var(--text-muted); font-size: 12px; grid-column: 1 / -1; padding: 25px; background: var(--bg); border-radius: 8px; }
+/* Ukiran alam orisinal: katak, cecak, jejak jari dan pakis. Hanya dekorasi. */
+.workspace { background-image: url('/static/ornamen-herpetofauna.svg'); background-size: 560px 420px; }
+.topbar { background-image: linear-gradient(#153c30d9, #153c30d9), url('/static/ornamen-herpetofauna.svg'); background-size: auto, 400px 300px; }
+.sidebar-note { padding-top: 10px; }
+.sidebar-ukiran { display: block; width: 125px; height: 82px; color: #c5d9aa; opacity: .55; margin: 0 auto 20px; }
+.section-heading { align-items: center; gap: 12px; }
+.section-heading > div { margin-right: auto; }
+.ukiran-judul { flex: 0 0 43px; width: 43px; height: 43px; color: #55774d; }
+.kepala-bagian { display: flex; gap: 24px; align-items: center; justify-content: space-between; min-height: 148px; margin-bottom: 24px; padding: 22px 30px; border: 1px solid #d2dec9; border-radius: 14px; background: linear-gradient(100deg, #e9efdfeb, #f6f8f0db), url('/static/ornamen-herpetofauna.svg') right center / 400px 300px; }
+.kepala-bagian .eyebrow { color: #61724f; font-size: 8px; letter-spacing: 1.6px; }
+.kepala-bagian h2 { font-size: clamp(20px, 2.2vw, 29px); line-height: 1.3; font-weight: 550; letter-spacing: -.7px; margin: 8px 0; }
+.kepala-bagian p:last-child { font-size: 12px; color: #5d705b; margin: 0; }
+.ukiran-bagian { width: 132px; height: 105px; flex: 0 0 132px; color: #527746; opacity: .8; }
+.kartu { background-image: linear-gradient(105deg, #ffffff 40%, #fffffff0), url('/static/ornamen-herpetofauna.svg'); background-size: auto, 470px 352px; background-position: center, right top; background-repeat: no-repeat; }
+.unggah { background-image: linear-gradient(90deg, #fdfefa40, #fdfefa 27%, #fdfefa 73%, #fdfefa40), url('/static/ornamen-herpetofauna.svg'); background-size: auto, 470px 352px; background-repeat: repeat; }
+.kartu > h2:first-child::after, #detail > h2:first-child::after { content: ""; display: block; width: 56px; height: 7px; margin-top: 10px; background: repeating-linear-gradient(135deg, #90a57b 0 1px, transparent 1px 6px); border-bottom: 1px solid #d7e1ce; }
+footer { background: url('/static/ornamen-herpetofauna.svg') center / 360px 270px; border-top: 1px solid #dfe6d9; }
 footer { max-width: 1520px; display: flex; gap: 16px; justify-content: space-between; text-align: left; font-size: 9px; padding: 22px 42px 28px; }
 footer a { color: var(--text-muted); text-underline-offset: 3px; }
 footer > span > span[aria-hidden] { margin: 0 8px; }
@@ -261,8 +278,8 @@ footer > span > span[aria-hidden] { margin: 0 8px; }
   .workspace-lokasi { font-size: 9px; }
   main { padding: 20px 18px 0; }
   .hero { min-height: 380px; border-radius: 14px; }
-  .hero::before { inset: 0 0 0 14%; background-position: 45% center; }
-  .hero::after { background: linear-gradient(90deg, #123829ed 0%, #123829b3 35%, #12382920 100%), linear-gradient(0deg, #10271beb, transparent 50%); }
+  .hero::before { inset: 0 0 0 auto; width: min(100%, 240px); background-size: auto 100%; background-position: left top; mask-image: linear-gradient(90deg, transparent, #0008 22%, #000 60%); }
+  .hero::after { background: linear-gradient(90deg, #123829f2 0%, #123829cc 25%, #1238298c 50%, #12382940 75%, #12382926 100%), linear-gradient(0deg, #10271bf2, #10271b66 25%, transparent 60%); }
   .hero-content { max-width: 94%; padding: 28px 24px 70px; }
   .hero .eyebrow { font-size: 7px; letter-spacing: 1px; }
   .hero h2 { font-size: 36px; letter-spacing: -1.5px; margin-top: 24px; }
@@ -273,6 +290,11 @@ footer > span > span[aria-hidden] { margin: 0 8px; }
   .section-heading { margin-top: 26px; }
   .section-heading h2 { font-size: 21px; }
   .section-heading .eyebrow { font-size: 7px; }
+  .ukiran-judul { flex-basis: 33px; width: 33px; height: 38px; }
+  .kepala-bagian { padding: 20px 18px; gap: 12px; min-height: 136px; margin-bottom: 18px; }
+  .kepala-bagian h2 { font-size: 21px; }
+  .kepala-bagian p:last-child { font-size: 10px; }
+  .ukiran-bagian { width: 64px; height: 85px; flex-basis: 64px; }
   .step-label { display: none; }
   .alur { gap: 14px; margin: 18px 0 22px; }
   .alur > div { gap: 12px; }
