@@ -4,59 +4,76 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suara Katak Papua</title>
-<meta name="theme-color" content="#1F5F3A">
+<meta name="theme-color" content="#153c30">
 <link rel="manifest" href="/static/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="icon" href="/static/ikon-192.png">
 <link rel="apple-touch-icon" href="/static/ikon-192.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<a class="lewati" href="#konten">Lewati ke konten</a>
 <header class="topbar">
-  <img src="/static/ikon-192.png" alt="" class="logo">
-  <div>
+  <a class="identitas" href="/" aria-label="Suara Katak Papua, beranda">
+    <img src="/static/ikon-192.png" alt="" class="logo">
+    <div>
     <h1>Suara Katak Papua</h1>
-    <p class="muted">Identifikasi suara herpetofauna dari rekaman AudioMoth (PAR)</p>
-  </div>
-  <nav>
-    <button class="tab aktif" data-tab="analisis">Analisis</button>
-    <button class="tab" data-tab="pola">Pola &amp; validasi</button>
-    <button class="tab" data-tab="soundscape">Soundscape</button>
-    <button class="tab" data-tab="model">Model &amp; label</button>
-    <button class="tab" data-tab="panduan">Panduan</button>
+    <p>LAB BIOAKUSTIK</p>
+    </div>
+  </a>
+  <p class="nav-label">RUANG EKSPLORASI</p>
+  <nav aria-label="Navigasi utama">
+    <button class="tab aktif" data-tab="analisis" aria-current="page"><span class="nav-icon" aria-hidden="true">▥</span>Analisis<span class="nav-panah" aria-hidden="true">↗</span></button>
+    <button class="tab" data-tab="pola"><span class="nav-icon" aria-hidden="true">⌘</span>Pola &amp; validasi</button>
+    <button class="tab" data-tab="soundscape"><span class="nav-icon" aria-hidden="true">≋</span>Soundscape</button>
+    <button class="tab" data-tab="model"><span class="nav-icon" aria-hidden="true">◈</span>Model &amp; label</button>
+    <button class="tab" data-tab="panduan"><span class="nav-icon" aria-hidden="true">▤</span>Panduan</button>
   </nav>
+  <div class="sidebar-note"><span class="titik" aria-hidden="true"></span> DENGARKAN ALAM PAPUA<p>Dari suara di hutan,<br>menjadi pengetahuan.</p><span class="sidebar-tag">Google Perch v2</span></div>
+  <p class="sidebar-bottom">PAPUA, INDONESIA <span>↗</span></p>
 </header>
 
-<main>
+<div class="workspace">
+<div class="workspace-bar"><span>Ruang kerja <span aria-hidden="true">/</span> <strong id="judul-tab">Analisis</strong></span><span class="workspace-lokasi"><span class="titik" aria-hidden="true"></span> Bioakustik Papua</span></div>
+<main id="konten" tabindex="-1">
   <section id="tab-analisis">
-    <div class="kartu prosa" id="cara-pakai">
-      <h2>Cara pakai</h2>
-      <ol>
-        <li><strong>Unggah rekaman</strong> lewat tombol Pilih file.</li>
-        <li><strong>Dengarkan</strong> rekaman asli atau suara yang sudah dibersihkan.</li>
-        <li><strong>Beri label</strong> pada tiap bagian 5 detik: nama jenis yang Anda kenali, atau bukan katak. Label disimpan saat Anda selesai mengetik dan keluar dari kotak.</li>
-        <li><strong>Latih model</strong> di tab Model &amp; label setelah memberi label sedikitnya dua kelompok berbeda.</li>
-      </ol>
-      <p>Tebakan belum membuktikan jenis katak. Mintalah pemeriksaan ahli sebelum memakai hasilnya.</p>
+    <div class="hero">
+      <div class="hero-content">
+        <p class="eyebrow"><span class="titik" aria-hidden="true"></span> EKSPLORASI SUARA HERPETOFAUNA</p>
+        <h2>Kenali suara.<br><span>Jelajahi kehidupan.</span></h2>
+        <p>Dengarkan keanekaragaman katak Papua.<br>Analisis rekaman, temukan pola, dan bangun<br class="desktop-break"> pengetahuan dari setiap panggilan.</p>
+        <a class="tombol hero-cta" href="#zona-unggah">Mulai analisis <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="hero-caption"><span>DI BALIK SETIAP SUARA, ADA KEHIDUPAN.</span><small>Foto ilustrasi · <i>Litoria caerulea</i>, Darwin<br><a href="https://commons.wikimedia.org/wiki/File:Litoria_caerulea_-_Darwin_NT.jpg" target="_blank" rel="noopener">Bidgee</a> · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a> · dipotong</small></div>
+    </div>
+    <div class="section-heading"><div><p class="eyebrow">DARI REKAMAN KE WAWASAN</p><h2>Mulai eksplorasi Anda</h2></div><span class="step-label">01 / UNGGAH &amp; ANALISIS</span></div>
+    <div class="alur" id="cara-pakai" aria-label="Alur kerja">
+      <div><span>01</span><p><strong>Unggah rekaman</strong><small>File audio atau folder AudioMoth.</small></p></div>
+      <div><span>02</span><p><strong>Dengarkan &amp; beri label</strong><small>Periksa setiap bagian 5 detik.</small></p></div>
+      <div><span>03</span><p><strong>Latih model Anda</strong><small>Mulai dari dua kelompok label.</small></p></div>
     </div>
     <div class="kartu unggah" id="zona-unggah">
-      <p><strong>Unggah rekaman</strong> (WAV/FLAC/MP3/M4A, boleh banyak sekaligus). Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00. Gunakan <strong>Pilih folder</strong> untuk membaca lokasi PARxxx dari nama folder; file bukan audio akan dilewati.</p>
-      <div class="baris">
-        <label class="tombol utama">Pilih file<input type="file" id="input-file" accept=".wav,.WAV,.flac,.mp3,.m4a,.ogg,audio/*" multiple hidden></label>
-        <label class="tombol">Pilih folder<input type="file" id="input-folder" webkitdirectory multiple hidden></label>
-        <button class="tombol" id="tombol-contoh">Coba contoh sintetis</button>
+      <div class="upload-main"><div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V3m-5 5 5-5 5 5M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></div><h3>Suara hutan, siap untuk dijelajahi.</h3><p>Seret rekaman ke sini, atau pilih dari perangkat Anda.</p><div class="baris upload-actions">
+        <label class="tombol utama file-picker">Pilih file <span aria-hidden="true">↗</span><input type="file" id="input-file" accept=".wav,.WAV,.flac,.mp3,.m4a,.ogg,audio/*" multiple></label>
+        <label class="tombol file-picker">Pilih folder<input type="file" id="input-folder" webkitdirectory multiple></label>
+      </div><p class="format-audio">WAV, FLAC, MP3, M4A, OGG · Beberapa file sekaligus</p><p class="contoh-prompt">Belum punya rekaman? <button class="text-button" id="tombol-contoh">Coba contoh sintetis <span aria-hidden="true">→</span></button></p></div>
+      <details class="pengaturan"><summary>Pengaturan analisis <span class="muted">AudioMoth &amp; pemrosesan</span></summary><div class="pengaturan-body">
+      <p class="muted">Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00. Pilih folder untuk membaca lokasi PARxxx; file bukan audio dilewati.</p>
+      <div class="baris opsi-analisis">
         <label class="cek"><input type="checkbox" id="perch-terfilter" aria-describedby="penjelasan-perch"> Pakai suara yang dibersihkan untuk Perch</label>
         <label class="cek"><input type="checkbox" id="mode-rendah"> Mode frekuensi rendah (highpass 400 Hz) — untuk spesies bernada rendah seperti Xenorhina; bukan metode tervalidasi</label>
       </div>
       <p class="muted" id="penjelasan-perch">Centang agar Perch menebak dari suara yang sudah dikurangi gangguannya; jika tidak, Perch memakai rekaman asli.</p>
+      </div></details>
       <div id="progres" class="muted" role="status"></div>
     </div>
-
+    <p class="catatan-verifikasi"><span aria-hidden="true">ⓘ</span> <span><strong>Eksplorasi, bukan kepastian.</strong> Semua tebakan jenis belum terverifikasi dan perlu diperiksa ahli.</span></p>
+    <div class="section-heading daftar-heading"><div><p class="eyebrow">KOLEKSI AUDIO</p><h2>Ruang analisis</h2></div><span class="count-badge" id="jumlah-rekaman">0 rekaman</span></div>
     <div class="tata">
       <aside class="kartu" id="daftar-kartu">
-        <h2>Rekaman</h2>
+        <h2>Rekaman Anda</h2>
         <ul id="daftar"></ul>
       </aside>
-      <div id="detail" class="kartu"><p class="muted">Pilih atau unggah rekaman.</p></div>
+      <div id="detail" class="kartu"><div class="empty-state"><span class="empty-wave" aria-hidden="true">▂ ▅ ▃ ▇ ▄ ▆ ▂</span><h3>Setiap panggilan punya cerita</h3><p class="muted">Pilih atau unggah rekaman untuk melihat<br>spektrogram, mendengarkan, dan memberi label.</p></div></div>
     </div>
   </section>
 
@@ -139,7 +156,8 @@
     </div>
   </section>
 </main>
-<footer class="muted">v<span id="versi"></span> · <a href="https://app.devin.ai/sessions/ee7e10010fa74aaa82095f6550b87daa" target="_blank" rel="noopener">Minta perubahan</a></footer>
+<footer class="muted"><span>Suara Katak Papua <span aria-hidden="true">/</span> Bioakustik untuk keanekaragaman hayati</span><span>v<span id="versi"></span> · <a href="https://app.devin.ai/sessions/ee7e10010fa74aaa82095f6550b87daa" target="_blank" rel="noopener">Minta perubahan ↗</a></span></footer>
+</div>
 <script src="/static/app.js"></script>
 </body>
 </html>
