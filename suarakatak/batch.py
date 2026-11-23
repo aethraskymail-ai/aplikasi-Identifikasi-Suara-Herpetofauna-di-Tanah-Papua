@@ -31,6 +31,7 @@ KOLOM = [
     "par", "tanggal", "file", "waktu", "durasi_s", "puncak_dinotch_hz", "gain_db",
     "katak_mean_db_sebelum", "katak_mean_db_sesudah", "dengung_mean_db_sebelum", "dengung_mean_db_sesudah",
     "jangkrik_mean_db_sebelum", "jangkrik_mean_db_sesudah", "detik_aktif_pita_katak", "persen_aktif_pita_katak",
+    "catatan_aktivitas",
     "tebakan_perch_belum_terverifikasi", "status",
 ]
 
@@ -180,6 +181,7 @@ def _main(argv=None) -> int:
                         jangkrik_mean_db_sesudah=h.level_sesudah[kj]["mean_db"],
                         detik_aktif_pita_katak=akt["detik_aktif"],
                         persen_aktif_pita_katak=akt["persen_aktif"],
+                        catatan_aktivitas=deteksi.peringatan_pita_datar(x, sr) or "",
                         status="ok",
                     )
                 if args.perch:

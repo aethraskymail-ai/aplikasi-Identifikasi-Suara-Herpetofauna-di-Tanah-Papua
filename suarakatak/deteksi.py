@@ -53,6 +53,20 @@ def segmen_aktif(
     ]
 
 
+def peringatan_pita_datar(x: np.ndarray, sr: int, ambang_db: float = 6.0,
+                          pita: tuple[float, float] = PITA_KATAK) -> str | None:
+    """Energi pita hampir konstan (p95 − p5 < ambang): tidak ada jeda sebagai acuan derau."""
+    _, e = energi_pita(x, sr, pita=pita)
+    if len(e) == 0:
+        return None
+    rentang = float(np.percentile(e, 95) - np.percentile(e, 5))
+    if rentang >= ambang_db:
+        return None
+    return (f"Energi pita {pita[0]:g}–{pita[1]:g} Hz hampir konstan (rentang p5–p95 {rentang:.1f} dB "
+            f"< {ambang_db:g} dB): tidak ada jeda sebagai acuan derau (mis. hujan, desis, perekam rusak "
+            "atau senyap), sehingga aktivitas tidak dapat dinilai; 0% bukan bukti tidak ada katak.")
+
+
 def ringkas_aktivitas(segmen: list[dict], durasi_s: float) -> dict:
     total = sum(s["akhir_s"] - s["mulai_s"] for s in segmen)
     return {

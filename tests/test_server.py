@@ -12,7 +12,7 @@ from suarakatak.klasifikasi import Penyimpanan
 def wav(durasi=1, sr=48000):
     buf = io.BytesIO()
     t = np.arange(int(durasi * sr)) / sr
-    sf.write(buf, 0.1 * np.sin(2 * np.pi * 3000 * t), sr, format="WAV")
+    sf.write(buf, 0.1 * np.sin(2 * np.pi * 3000 * t) * ((t % 0.5) < 0.25), sr, format="WAV")
     return buf.getvalue()
 
 

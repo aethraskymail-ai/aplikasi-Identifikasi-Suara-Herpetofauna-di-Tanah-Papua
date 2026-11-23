@@ -282,4 +282,5 @@ def test_csv_senyap_dan_pita_tidak_terukur(tmp_path, sr):
     assert float(rows[0]["katak_mean_db_sebelum"]) == -200
     assert float(rows[0]["katak_mean_db_sesudah"]) == -200
     assert rows[0]["jangkrik_mean_db_sebelum"] == ("-200.0" if sr == 48000 else "")
+    assert "tidak dapat dinilai" in rows[0]["catatan_aktivitas"]
     assert (keluaran / "PAR003" / "2024-01-01" / "20240101_183000.WAV").is_file()
