@@ -12,12 +12,13 @@ import shutil
 import uuid
 from pathlib import Path
 
+import soundfile as sf
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, contoh, perch, soundscape
+from . import __version__, contoh, kelompok, perch, soundscape
 from .analisis import analisis_file
 from .audio import AudioTidakValid, simpan_wav
 from .klasifikasi import Penyimpanan
@@ -155,6 +156,41 @@ def spektrogram(rid: str, jenis: str):
     if not path.exists():
         raise HTTPException(404)
     return FileResponse(path, media_type="image/png")
+
+
+@app.get("/api/rekaman/{rid}/jendela/{idx}/audio.wav")
+def audio_jendela(rid: str, idx: int):
+    path = _folder(rid) / "terfilter.wav"
+    waktu = db.waktu_jendela(rid, idx)
+    if waktu is None or not path.is_file():
+        raise HTTPException(404, "Potongan audio tidak ditemukan.")
+    buf = io.BytesIO()
+    with sf.SoundFile(path) as wav:
+        mulai, akhir = (min(wav.frames, round(t * wav.samplerate)) for t in waktu)
+        wav.seek(mulai)
+        sf.write(buf, wav.read(akhir - mulai, dtype="int16"), wav.samplerate, format="WAV")
+    return Response(buf.getvalue(), media_type="audio/wav")
+
+
+@app.get("/api/kelompok")
+def daftar_kelompok() -> list[dict]:
+    return [k.ringkasan() for k in kelompok.buat(db.jendela_kelompok())]
+
+
+class LabelKelompok(BaseModel):
+    label: str
+
+
+@app.post("/api/kelompok/{kid}/label")
+def label_kelompok(kid: str, body: LabelKelompok) -> dict:
+    label = body.label.strip()
+    if not label:
+        raise HTTPException(422, "Masukkan label jenis atau label seperti 'bukan katak'.")
+    for k in kelompok.buat(db.jendela_kelompok()):
+        if k.id == kid:
+            n = db.beri_label_kelompok(k.anggota, label)
+            return {"diterapkan": n, "label": label}
+    raise HTTPException(409, "Kelompok sudah berubah. Muat ulang kelompok lalu dengarkan kembali.")
 
 
 class Label(BaseModel):

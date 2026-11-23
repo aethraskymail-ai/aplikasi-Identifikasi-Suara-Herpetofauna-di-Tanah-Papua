@@ -28,6 +28,9 @@ tervalidasi, mendeteksi aktivitas di pita katak 2,4–3,8 kHz, lalu mengenali su
    - Tidak memakai teknik yang gagal di catatan: afftdn/anlmdn, spectral subtraction,
      bandreject statis, loudnorm.
 2. **Label**: tiap jendela 5 detik bisa diberi nama spesies (atau `bukan katak`, `hujan`, dll.).
+   Untuk pelabelan sekaligus, buka *Model & label* → *Kelompokkan panggilan*. Dengarkan contoh
+   tiap kelompok; kemiripan embedding Perch bukan identifikasi jenis. Jika yakin, isi label
+   kelompok untuk jendela yang belum dilabel. Label yang sudah ada tidak ditimpa.
 3. **Latih**: tab *Model & label* → *Latih model*. Butuh ≥ 2 kelas; akurasi validasi silang
    muncul bila tiap kelas punya ≥ 2 contoh. Setelah itu kolom *Model kustom* terisi untuk setiap
    rekaman. Label bisa diekspor ke CSV.

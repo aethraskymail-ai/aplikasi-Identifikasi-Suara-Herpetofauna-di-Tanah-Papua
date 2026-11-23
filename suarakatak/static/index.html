@@ -115,8 +115,18 @@
   <section id="tab-model" hidden>
     <div class="kepala-bagian"><div><p class="eyebrow">04 / MODEL &amp; LABEL</p><h2>Pengetahuan tumbuh dari label.</h2><p>Bangun model dari suara yang Anda kenali.</p></div><svg class="ukiran-bagian" aria-hidden="true" focusable="false"><use href="/static/ornamen-herpetofauna.svg#jejak"/></svg></div>
     <div class="kartu">
+      <h2>Kelompok panggilan mirip</h2>
+      <p class="muted">Perch mengelompokkan jendela 5 detik dari rekaman yang sudah dianalisis berdasarkan kemiripan suara, bukan identifikasi jenis. Dengarkan contoh audio tersaring, lalu beri label hanya jika Anda yakin. Untuk kelompok campuran, periksa dan beri label per jendela di tab Analisis.</p>
+      <div class="baris">
+        <button class="tombol utama" id="tombol-kelompok">Kelompokkan panggilan</button>
+        <a class="tombol" href="#model-kustom">Ke pelatihan model ↓</a>
+      </div>
+      <p id="status-kelompok" class="muted" role="status"></p>
+      <div id="daftar-kelompok" class="grid-kelompok"></div>
+    </div>
+    <div class="kartu" id="model-kustom">
       <h2>Model dari label Anda</h2>
-      <p class="muted">Beri label per jendela 5 detik di tab Analisis (nama jenis, atau <em>bukan katak</em>), lalu latih. Model baru dipakai di semua rekaman.</p>
+      <p class="muted">Beri label lewat kelompok panggilan di atas atau per jendela di tab Analisis. Setelah ada minimal dua label berbeda (misalnya satu jenis katak dan <em>bukan katak</em>), latih model untuk semua rekaman.</p>
       <div class="baris">
         <button class="tombol utama" id="tombol-latih">Latih model</button>
         <a class="tombol" href="/api/label.csv">Unduh label (CSV)</a>

@@ -360,6 +360,73 @@ async function muatModel() {
     : '<tr><td class="muted">Belum ada label.</td></tr>';
 }
 
+$("#tombol-kelompok").addEventListener("click", async (e) => {
+  const tombol = e.currentTarget;
+  const status = $("#status-kelompok");
+  const daftar = $("#daftar-kelompok");
+  tombol.disabled = true;
+  status.textContent = "Mengelompokkan jendela rekaman …";
+  daftar.replaceChildren();
+  try {
+    const kelompok = await api("/api/kelompok");
+    status.textContent = kelompok.length
+      ? `${kelompok.length} kelompok · ${kelompok.reduce((n, k) => n + k.jumlah, 0)} jendela dari rekaman yang dianalisis Perch.`
+      : "Belum ada jendela dari Perch. Unggah dan analisis rekaman untuk membuat kelompok.";
+    tombol.textContent = "Muat ulang kelompok";
+    daftar.innerHTML = kelompok.map((k, nomor) => `
+      <article class="kartu">
+        <h3>Kelompok ${nomor + 1}</h3>
+        <p class="muted">${k.jumlah} jendela · <span class="sisa">${k.belum_dilabel} belum dilabel</span></p>
+        ${k.contoh.map((j, i) => `
+          <p class="muted">Contoh ${i + 1} · ${esc(j.nama_file)}<br>${fmt(j.mulai_s)}–${fmt(j.akhir_s)} detik</p>
+          <audio controls preload="none" aria-label="Contoh ${i + 1} kelompok ${nomor + 1}"
+            src="/api/rekaman/${encodeURIComponent(j.rekaman_id)}/jendela/${j.idx}/audio.wav"></audio>`).join("")}
+        <form ${k.belum_dilabel ? "" : "hidden"}>
+          <div class="isian"><label>Label kelompok <input name="label" required placeholder="Nama jenis atau bukan katak"></label></div>
+          <button class="tombol" type="submit">Beri label ${k.belum_dilabel} jendela</button>
+          <p class="muted">Label yang sudah ada tidak ditimpa.</p>
+        </form>
+        <p class="hasil-label" role="status"></p>
+      </article>`).join("");
+    daftar.querySelectorAll("form").forEach((form, i) =>
+      form.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const input = form.elements.label;
+        const label = input.value.trim();
+        const simpan = $("button", form);
+        const kartu = form.parentElement;
+        const hasil = $(".hasil-label", kartu);
+        if (!label) {
+          hasil.textContent = "Masukkan label lebih dulu.";
+          input.focus();
+          return;
+        }
+        simpan.disabled = true;
+        hasil.textContent = "Menyimpan label …";
+        try {
+          const r = await api(`/api/kelompok/${kelompok[i].id}/label`, json({ label }));
+          form.hidden = true;
+          $(".sisa", kartu).textContent = "0 belum dilabel";
+          hasil.textContent = r.diterapkan
+            ? `Label “${r.label}” disimpan untuk ${r.diterapkan} jendela.`
+            : "Tidak ada jendela baru yang perlu dilabel.";
+          await muatModel();
+          if (aktifId) await buka(aktifId);
+          else await muatDaftar();
+        } catch (err) {
+          hasil.textContent = form.hidden ? `${hasil.textContent} Muat ulang halaman untuk melihat jumlah label terbaru.` : err.message;
+        } finally {
+          simpan.disabled = false;
+        }
+      })
+    );
+  } catch (err) {
+    status.textContent = err.message;
+  } finally {
+    tombol.disabled = false;
+  }
+});
+
 $("#tombol-latih").addEventListener("click", async (e) => {
   e.target.disabled = true;
   $("#hasil-latih").innerHTML = '<p class="muted">Melatih …</p>';
