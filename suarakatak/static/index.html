@@ -54,8 +54,8 @@
     <div class="kartu unggah" id="zona-unggah">
       <div class="upload-main"><div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V3m-5 5 5-5 5 5M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></div><h3>Suara hutan, siap untuk dijelajahi.</h3><p>Seret rekaman ke sini, atau pilih dari perangkat Anda.</p><div class="baris upload-actions">
         <label class="tombol utama file-picker">Pilih file <span aria-hidden="true">↗</span><input type="file" id="input-file" accept=".wav,.WAV,.flac,.mp3,.m4a,.ogg,audio/*" multiple></label>
-        <label class="tombol file-picker">Pilih folder<input type="file" id="input-folder" webkitdirectory multiple></label>
-      </div><p class="format-audio">WAV, FLAC, MP3, M4A, OGG · Beberapa file sekaligus</p><p class="contoh-prompt">Belum punya rekaman? <button class="text-button" id="tombol-contoh">Coba contoh sintetis <span aria-hidden="true">→</span></button></p></div>
+        <label class="tombol file-picker" id="pemilih-folder">Pilih folder<input type="file" id="input-folder" webkitdirectory multiple></label>
+      </div><div class="isian-situs" id="isian-situs" hidden><label for="situs-manual">Situs PAR (opsional)</label><input id="situs-manual" placeholder="PAR001" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="catatan-situs"><small id="catatan-situs">Browser ponsel tidak bisa memilih folder. Pilih beberapa file sekaligus, lalu isi kode situsnya di sini.</small></div><p class="format-audio">WAV, FLAC, MP3, M4A, OGG · Beberapa file sekaligus</p><p class="contoh-prompt">Belum punya rekaman? <button class="text-button" id="tombol-contoh">Coba contoh sintetis <span aria-hidden="true">→</span></button></p></div>
       <details class="pengaturan"><summary>Pengaturan analisis <span class="muted">AudioMoth &amp; pemrosesan</span></summary><div class="pengaturan-body">
       <p class="muted">Nama asli AudioMoth <code>YYYYMMDD_HHMMSS.WAV</code> dibaca untuk cek jendela 17:30–21:00. Pilih folder untuk membaca lokasi PARxxx; file bukan audio dilewati.</p>
       <div class="baris opsi-analisis">
@@ -108,7 +108,8 @@
         <button class="tombol utama" id="tombol-soundscape">Tampilkan</button>
       </div>
       <p id="info-soundscape" class="muted" role="status"></p>
-      <img id="gambar-soundscape" class="spek" alt="Soundscape" hidden>
+      <div class="gulir gambar-lebar"><img id="gambar-soundscape" class="spek" alt="Soundscape" hidden></div>
+      <a class="buka-penuh" id="buka-soundscape" target="_blank" rel="noopener" hidden>Buka ukuran penuh ↗</a>
     </div>
   </section>
 

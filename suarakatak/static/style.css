@@ -41,9 +41,10 @@ main { padding: 14px 16px; max-width: 1440px; margin: 0 auto; }
 .tabel th { font-weight: 600; color: var(--text-muted); font-size: 12px; }
 .tabel td.angka, .tabel th.angka { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
 .gulir { overflow-x: auto; }
+.buka-penuh { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; color: var(--accent); text-underline-offset: 3px; }
 .spek { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); display: block; margin-bottom: 6px; }
-.dua { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 860px) { .dua { grid-template-columns: 1fr; } }
+.dua { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 860px) { .dua { grid-template-columns: minmax(0, 1fr); } }
 audio { width: 100%; height: 36px; }
 .info { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 8px; }
 .info span b { font-weight: 600; }
@@ -75,7 +76,9 @@ footer { text-align: center; padding: 16px; font-size: 12px; }
 .item-templat.aktif { border-color: var(--accent); }
 .item-templat img, .item-cocok img { width: 100%; height: 110px; object-fit: fill; display: block; border-radius: 4px; background: #000; }
 .item-cocok.hadir { border-color: var(--accent); background: #EEF6F0; }
-.item-cocok.tidak { opacity: .6; }
+.item-cocok.tidak { background: #f1f2ee; }
+.item-cocok.tidak img { opacity: .55; }
+.putar-cocok { min-width: 96px; }
 .lencana { display: inline-block; font-size: 11.5px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); }
 .lencana.hadir { color: var(--accent); border-color: var(--accent); }
 .lencana.belum { color: #9A5B00; border-color: #9A5B00; }
@@ -180,6 +183,9 @@ main > section { min-width: 0; }
 .file-picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 100px; }
 .file-picker:focus-within { outline: 3px solid #b2802c; outline-offset: 3px; }
 .upload-main .format-audio { font-size: 9px; }
+.isian-situs { display: grid; gap: 4px; max-width: 280px; margin: 4px auto 10px; text-align: left; font-size: 12px; }
+.isian-situs input { padding: 10px; min-height: 44px; font: inherit; font-size: 16px; border: 1px solid #b6c5b7; border-radius: 8px; background: white; color: var(--text); text-transform: uppercase; }
+.isian-situs small { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
 .upload-main .contoh-prompt { margin-top: 16px; font-size: 10px; }
 .text-button { border: 0; background: none; padding: 4px 2px; cursor: pointer; color: var(--accent); font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 .text-button:disabled { opacity: .6; cursor: wait; }
@@ -250,7 +256,7 @@ footer > span > span[aria-hidden] { margin: 0 8px; }
   .alur { gap: 10px; }
   .alur small { font-size: 9px; }
   .tata { grid-template-columns: 180px minmax(0, 1fr); }
-  .dua { grid-template-columns: 1fr; }
+  .dua { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1000px) {
   .hero h2 { font-size: 32px; }
@@ -319,6 +325,7 @@ footer > span > span[aria-hidden] { margin: 0 8px; }
   .empty-state { padding: 12px 0 22px; }
   .isian input, select { max-width: 100%; font-size: 16px; }
   .grid-templat, .grid-cocok { grid-template-columns: minmax(0, 1fr); }
+  .gambar-lebar .spek { width: 760px; max-width: none; }
   .baris > .tombol { max-width: 100%; overflow-wrap: anywhere; }
   .prosa { font-size: 13px; }
   .prosa ol { padding-left: 22px; }

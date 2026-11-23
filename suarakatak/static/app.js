@@ -150,10 +150,12 @@ async function buka(id) {
     <div class="dua">
       <div><div class="muted">Asli</div><audio id="audio-asli" controls preload="metadata" src="/api/rekaman/${id}/audio/asli"></audio>
         <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/asli" download="${esc(namaAsli)}">Unduh rekaman asli</a>
-        <img class="spek" src="/api/rekaman/${id}/spektrogram/sebelum.png" alt="Spektrogram sebelum"></div>
+        <div class="gulir gambar-lebar"><img class="spek" src="/api/rekaman/${id}/spektrogram/sebelum.png" alt="Spektrogram sebelum"></div>
+        <a class="buka-penuh" href="/api/rekaman/${id}/spektrogram/sebelum.png" target="_blank" rel="noopener">Buka ukuran penuh ↗</a></div>
       <div><div class="muted">Suara yang dibersihkan</div><audio id="audio-terfilter" controls preload="metadata" src="/api/rekaman/${id}/audio/terfilter"></audio>
         <a class="tombol unduh-audio" href="/api/rekaman/${id}/audio/terfilter" download="${esc(namaDibersihkan)}">Unduh suara yang dibersihkan</a>
-        <img class="spek" src="/api/rekaman/${id}/spektrogram/sesudah.png" alt="Spektrogram sesudah"></div>
+        <div class="gulir gambar-lebar"><img class="spek" src="/api/rekaman/${id}/spektrogram/sesudah.png" alt="Spektrogram sesudah"></div>
+        <a class="buka-penuh" href="/api/rekaman/${id}/spektrogram/sesudah.png" target="_blank" rel="noopener">Buka ukuran penuh ↗</a></div>
     </div>
     <h3>Kehadiran tervalidasi manual</h3>
     <p>${(d.hadir_tervalidasi || []).length ? d.hadir_tervalidasi.map((h) => `<span class="lencana hadir">${esc(h.spesies)} · ${h.n} deteksi</span>`).join(" ") : '<span class="muted">Belum ada jenis yang divalidasi hadir di rekaman ini.</span>'}</p>
@@ -293,6 +295,14 @@ function unggahFile(fd, progres) {
 
 async function unggah(files, folder = false) {
   const terfilter = $("#perch-terfilter").checked;
+  const situsIsian = $("#situs-manual").value.trim().toUpperCase();
+  const situs = POLA_SITUS.test(situsIsian) ? situsIsian : "";
+  if (situsIsian && !situs) {
+    $("#progres").textContent = "Kode situs harus berbentuk PAR diikuti 3 angka, misalnya PAR001.";
+    $("#input-file").value = "";
+    $("#situs-manual").focus();
+    return;
+  }
   const audio = [...files].filter((f) => !folder || /\.(wav|flac|mp3|m4a|ogg|aac|mpga)$/i.test(f.name));
   const dilewati = files.length - audio.length;
   let terakhir = null;
@@ -307,6 +317,7 @@ async function unggah(files, folder = false) {
     fd.append("perch_terfilter", terfilter);
     fd.append("mode_rendah", $("#mode-rendah").checked);
     if (f.webkitRelativePath) fd.append("path_relatif", f.webkitRelativePath);
+    else if (situs) fd.append("path_relatif", `${situs}/${f.name}`);
     try {
       terakhir = await unggahFile(fd, tampilkan);
     } catch (e) {
@@ -319,6 +330,11 @@ async function unggah(files, folder = false) {
   if (terakhir) buka(terakhir.id);
 }
 
+const POLA_SITUS = /^PAR\d{3}(?:_PAR\d{3})*$/;
+if (navigator.userAgentData?.mobile ?? /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+  $("#pemilih-folder").hidden = true;
+  $("#isian-situs").hidden = false;
+}
 $("#input-file").addEventListener("change", (e) => e.target.files.length && unggah(e.target.files));
 $("#input-folder").addEventListener("change", (e) => e.target.files.length && unggah(e.target.files, true));
 const zona = $("#zona-unggah");
@@ -384,8 +400,10 @@ function putarPotongan(audio, a, b) {
   audio.currentTime = a;
   const henti = () => { if (audio.currentTime >= b) { audio.pause(); audio.removeEventListener("timeupdate", henti); } };
   audio.addEventListener("timeupdate", henti);
-  audio.play();
+  return audio.play();
 }
+
+const statusCari = {};
 
 function pasangKanvas(id, durasi) {
   const img = $("#kanvas"), wadah = $("#wadah-kanvas"), kotak = $("#kotak-pilih");
@@ -491,7 +509,7 @@ async function bukaTemplat(tid, gulir = true) {
       <button class="tombol" id="hapus-templat">Hapus templat</button>
     </div>
     <p class="muted">Mencari ulang mengganti kandidat yang belum divalidasi; kandidat yang sudah Anda tandai tetap disimpan.</p>
-    <p id="status-cari" class="muted" role="status"></p>
+    <p id="status-cari" class="muted" role="status">${esc(statusCari[tid] || "")}</p>
     <div class="baris">
       <label for="filter-cocok">Tampilkan</label>
       <select id="filter-cocok"><option value="belum">Belum divalidasi</option><option value="hadir">Hadir</option><option value="tidak">Tidak</option><option value="semua">Semua</option></select>
@@ -506,7 +524,8 @@ async function bukaTemplat(tid, gulir = true) {
       const r = await api(`/api/templat/${tid}/jalankan`, json({
         situs: $("#cari-situs").value || null, ambang: +$("#cari-ambang").value, maks_per_rekaman: +$("#cari-maks").value,
       }));
-      $("#status-cari").textContent = `${r.rekaman_dicari} rekaman dicari, ${r.kandidat_baru} kandidat baru${r.gagal ? `, ${r.gagal} rekaman gagal dibaca` : ""}. Semua kandidat belum divalidasi.`;
+      statusCari[tid] = `${r.rekaman_dicari} rekaman dicari, ${r.kandidat_baru} kandidat baru${r.gagal ? `, ${r.gagal} rekaman gagal dibaca` : ""}. Semua kandidat belum divalidasi.`;
+      $("#status-cari").textContent = statusCari[tid];
       await muatPola();
     } catch (err) {
       $("#status-cari").textContent = err.message;
@@ -543,7 +562,7 @@ async function muatCocok(tid) {
       <div>${labelValidasi(c.validasi)} <span class="muted mono">skor ${fmt(c.skor, 2)}</span></div>
       <div class="muted" style="word-break:break-all">${esc(c.situs || "tanpa situs")} · ${esc(c.nama_file)} · ${fmt(c.mulai_s, 1)} dtk</div>
       <div class="baris">
-        <button class="tombol kecil" data-aksi="putar" data-rid="${c.rekaman_id}" data-a="${c.mulai_s}" data-b="${c.akhir_s}">▶</button>
+        <button class="tombol kecil putar-cocok" data-aksi="putar" data-rid="${c.rekaman_id}" data-a="${c.mulai_s}" data-b="${c.akhir_s}" aria-pressed="false">▶ Putar</button>
         <button class="tombol kecil" data-aksi="hadir">Hadir</button>
         <button class="tombol kecil" data-aksi="tidak">Tidak</button>
         ${c.validasi ? '<button class="tombol kecil" data-aksi="">Batalkan</button>' : ""}
@@ -553,9 +572,18 @@ async function muatCocok(tid) {
     const item = b.closest(".item-cocok");
     if (b.dataset.aksi === "putar") {
       const audio = $("#audio-cocok"), src = `/api/rekaman/${b.dataset.rid}/audio/terfilter`;
+      const aktif = b.getAttribute("aria-pressed") === "true";
+      const tampil = (el, teks, ditekan) => { el.textContent = teks; el.setAttribute("aria-pressed", ditekan); };
+      wadah.querySelectorAll(".putar-cocok").forEach((el) => tampil(el, "▶ Putar", false));
+      audio.pause();
+      if (aktif) return;
+      tampil(b, "Memuat …", true);
+      audio.onplaying = () => tampil(b, "■ Hentikan", true);
+      audio.onpause = () => audio.paused && tampil(b, "▶ Putar", false);
       if (!audio.src.endsWith(src)) audio.src = src;
       // play() memulai pemuatan meski preload="none"; currentTime menyimpan posisi awal.
-      putarPotongan(audio, Math.max(0, +b.dataset.a - 0.3), +b.dataset.b + 0.3);
+      putarPotongan(audio, Math.max(0, +b.dataset.a - 0.3), +b.dataset.b + 0.3)
+        .catch(() => tampil(b, "▶ Putar", false));
       return;
     }
     await api("/api/cocok/validasi", json({ ids: [+item.dataset.id], validasi: b.dataset.aksi || null }));
@@ -605,10 +633,13 @@ $("#tombol-soundscape").addEventListener("click", async (e) => {
   try {
     const h = await api(`/api/soundscape${q}`);
     img.src = `/api/soundscape.png${q}${q ? "&" : "?"}t=${Date.now()}`;
+    $("#buka-soundscape").href = img.src;
     img.hidden = false;
+    $("#buka-soundscape").hidden = false;
     info.textContent = `${h.rekaman} rekaman · sumbu waktu: ${h.sumbu}${h.rekaman_tanpa_jam_dilewati ? ` · ${h.rekaman_tanpa_jam_dilewati} rekaman tanpa jam mulai tidak dimasukkan` : ""}.`;
   } catch (err) {
     img.hidden = true;
+    $("#buka-soundscape").hidden = true;
     info.textContent = err.message;
   } finally {
     e.target.disabled = false;
