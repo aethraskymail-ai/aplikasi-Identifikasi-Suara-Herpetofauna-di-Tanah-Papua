@@ -397,8 +397,10 @@ const HALAMAN_S = 60, F_ATAS = 12000;
 const json = (body) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function putarPotongan(audio, a, b) {
+  if (audio._henti) audio.removeEventListener("timeupdate", audio._henti);
   audio.currentTime = a;
-  const henti = () => { if (audio.currentTime >= b) { audio.pause(); audio.removeEventListener("timeupdate", henti); } };
+  const henti = () => { if (audio.currentTime >= b) { audio.pause(); audio.removeEventListener("timeupdate", henti); audio._henti = null; } };
+  audio._henti = henti;
   audio.addEventListener("timeupdate", henti);
   return audio.play();
 }
