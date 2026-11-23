@@ -192,6 +192,16 @@ def test_kelompok_perch_audio_label_dan_latih(client, monkeypatch):
     audio = client.get(tautan)
     assert audio.is_success
     assert audio.headers["content-type"] == "audio/wav"
+    assert audio.headers["accept-ranges"] == "bytes"
+    parsial = client.get(tautan, headers={"Range": "bytes=0-1"})
+    assert parsial.status_code == 206
+    assert parsial.headers["content-range"] == f"bytes 0-1/{len(audio.content)}"
+    assert parsial.headers["accept-ranges"] == "bytes"
+    assert parsial.content == audio.content[:2]
+    assert client.get(tautan, headers={"Range": "bytes=-8"}).content == audio.content[-8:]
+    di_luar = client.get(tautan, headers={"Range": f"bytes={len(audio.content)}-"})
+    assert di_luar.status_code == 416
+    assert di_luar.headers["content-range"] == f"bytes */{len(audio.content)}"
     clip, sr = sf.read(io.BytesIO(audio.content), dtype="int16")
     with sf.SoundFile(server.FOLDER_REKAMAN / id_b / "terfilter.wav") as sumber:
         sumber.seek(5 * sr)

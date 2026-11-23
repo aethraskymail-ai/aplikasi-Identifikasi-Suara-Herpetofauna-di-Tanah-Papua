@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 import soundfile as sf
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -159,7 +159,7 @@ def spektrogram(rid: str, jenis: str):
 
 
 @app.get("/api/rekaman/{rid}/jendela/{idx}/audio.wav")
-def audio_jendela(rid: str, idx: int):
+def audio_jendela(rid: str, idx: int, request: Request):
     path = _folder(rid) / "terfilter.wav"
     waktu = db.waktu_jendela(rid, idx)
     if waktu is None or not path.is_file():
@@ -169,7 +169,23 @@ def audio_jendela(rid: str, idx: int):
         mulai, akhir = (min(wav.frames, round(t * wav.samplerate)) for t in waktu)
         wav.seek(mulai)
         sf.write(buf, wav.read(akhir - mulai, dtype="int16"), wav.samplerate, format="WAV")
-    return Response(buf.getvalue(), media_type="audio/wav")
+    isi = buf.getvalue()
+    headers = {"Accept-Ranges": "bytes"}
+    rentang = re.fullmatch(r"bytes=([0-9]*)-([0-9]*)", request.headers.get("range", ""), re.IGNORECASE)
+    if rentang and any(rentang.groups()) and "if-range" not in request.headers:
+        awal, akhir = rentang.groups()
+        ukuran = len(isi)
+        try:
+            a = int(awal) if awal else max(0, ukuran - int(akhir))
+            b = min(int(akhir), ukuran - 1) if awal and akhir else ukuran - 1
+        except ValueError:
+            return Response(isi, media_type="audio/wav", headers=headers)
+        if a > b:
+            headers["Content-Range"] = f"bytes */{ukuran}"
+            return Response(status_code=416, headers=headers)
+        headers["Content-Range"] = f"bytes {a}-{b}/{ukuran}"
+        return Response(isi[a:b + 1], status_code=206, media_type="audio/wav", headers=headers)
+    return Response(isi, media_type="audio/wav", headers=headers)
 
 
 @app.get("/api/kelompok")
