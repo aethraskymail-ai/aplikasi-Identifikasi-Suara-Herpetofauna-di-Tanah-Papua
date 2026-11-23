@@ -96,6 +96,31 @@ class Penyimpanan:
                 (label, time.time() if label else None, rid, idx),
             )
 
+    def jendela_kelompok(self) -> list[dict]:
+        with self._db() as db:
+            rows = db.execute(
+                """SELECT j.rekaman_id, j.idx, j.mulai_s, j.akhir_s, j.embedding, j.label, r.nama_file
+                   FROM jendela j JOIN rekaman r ON r.id = j.rekaman_id
+                   ORDER BY j.rekaman_id, j.idx"""
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def waktu_jendela(self, rid: str, idx: int) -> tuple[float, float] | None:
+        with self._db() as db:
+            row = db.execute(
+                "SELECT mulai_s, akhir_s FROM jendela WHERE rekaman_id=? AND idx=?", (rid, idx)
+            ).fetchone()
+        return (row["mulai_s"], row["akhir_s"]) if row else None
+
+    def beri_label_kelompok(self, anggota: list[dict], label: str) -> int:
+        waktu = time.time()
+        with _lock, self._db() as db:
+            hasil = db.executemany(
+                "UPDATE jendela SET label=?, dilabel=? WHERE rekaman_id=? AND idx=? AND label IS NULL",
+                ((label, waktu, j["rekaman_id"], j["idx"]) for j in anggota),
+            )
+        return hasil.rowcount
+
     def data_latih(self) -> tuple[np.ndarray, list[str], list[dict]]:
         with self._db() as db:
             rows = db.execute(

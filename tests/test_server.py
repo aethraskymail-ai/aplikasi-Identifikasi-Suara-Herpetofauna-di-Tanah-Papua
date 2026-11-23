@@ -164,3 +164,65 @@ def test_mode_dan_folder_diteruskan_bersama(client, mode_rendah):
     assert data["peringatan"] == []
     stored = client.get(f'/api/rekaman/{data["id"]}').json()
     assert stored["mode_rendah"] is mode_rendah
+
+
+def test_kelompok_perch_audio_label_dan_latih(client, monkeypatch):
+    assert client.get("/api/kelompok").json() == []
+
+    def jendela_contoh(x, sr):
+        mata = np.eye(2, dtype=np.float32)
+        return [server.perch.Jendela(i * 5, (i + 1) * 5, mata[i % 2], np.zeros(2)) for i in range(4)]
+
+    monkeypatch.setattr(server.perch, "tersedia", lambda: True)
+    monkeypatch.setattr(server.perch, "analisis", jendela_contoh)
+    monkeypatch.setattr(server.perch, "teratas", lambda *a, **kw: [])
+    id_a = upload(client, wav(20), "PAR001_2026-04-29.mp3").json()["id"]
+    id_b = upload(client, wav(20), "PAR002_2026-05-06.mp3").json()["id"]
+    assert client.post(f"/api/rekaman/{id_a}/label", json={"idx": 0, "label": "bukan katak"}).is_success
+
+    hasil = client.get("/api/kelompok").json()
+    assert sorted(k["jumlah"] for k in hasil) == [4, 4]
+    assert sorted(k["belum_dilabel"] for k in hasil) == [3, 4]
+    for k in hasil:
+        assert len(k["contoh"]) == 3
+        assert len({j["idx"] % 2 for j in k["contoh"]}) == 1
+        assert all("embedding" not in j for j in k["contoh"])
+
+    tautan = f"/api/rekaman/{id_b}/jendela/1/audio.wav"
+    audio = client.get(tautan)
+    assert audio.is_success
+    assert audio.headers["content-type"] == "audio/wav"
+    assert audio.headers["accept-ranges"] == "bytes"
+    parsial = client.get(tautan, headers={"Range": "bytes=0-1"})
+    assert parsial.status_code == 206
+    assert parsial.headers["content-range"] == f"bytes 0-1/{len(audio.content)}"
+    assert parsial.headers["accept-ranges"] == "bytes"
+    assert parsial.content == audio.content[:2]
+    assert client.get(tautan, headers={"Range": "bytes=-8"}).content == audio.content[-8:]
+    di_luar = client.get(tautan, headers={"Range": f"bytes={len(audio.content)}-"})
+    assert di_luar.status_code == 416
+    assert di_luar.headers["content-range"] == f"bytes */{len(audio.content)}"
+    clip, sr = sf.read(io.BytesIO(audio.content), dtype="int16")
+    with sf.SoundFile(server.FOLDER_REKAMAN / id_b / "terfilter.wav") as sumber:
+        sumber.seek(5 * sr)
+        assert len(clip) == 5 * sr
+        np.testing.assert_array_equal(clip, sumber.read(5 * sr, dtype="int16"))
+    assert client.get(f"/api/rekaman/{id_b}/jendela/99/audio.wav").status_code == 404
+
+    kelompok_a, kelompok_b = sorted(hasil, key=lambda k: k["belum_dilabel"])
+    url_a = f"/api/kelompok/{kelompok_a['id']}/label"
+    assert client.post(url_a, json={"label": "  "}).status_code == 422
+    assert client.post("/api/kelompok/kedaluwarsa/label", json={"label": "hujan"}).status_code == 409
+    assert client.post(url_a, json={"label": " bukan katak "}).json() == {"label": "bukan katak", "diterapkan": 3}
+    assert client.post(url_a, json={"label": "hujan"}).json()["diterapkan"] == 0
+    assert client.post("/api/latih").json()["siap"] is False
+    assert client.post(f"/api/kelompok/{kelompok_b['id']}/label", json={"label": "hujan"}).json()["diterapkan"] == 4
+
+    latihan = client.post("/api/latih").json()
+    assert latihan["siap"] is True
+    assert latihan["kelas"] == {"bukan katak": 4, "hujan": 4}
+    detail = client.get(f"/api/rekaman/{id_a}").json()
+    assert detail["jendela"][0]["label"] == "bukan katak"
+    assert detail["jendela"][1]["label"] == "hujan"
+    assert all(j["data_latih"] and j["model_kustom"] for j in detail["jendela"])
+    assert len(client.get("/api/label.csv").text.splitlines()) == 9
