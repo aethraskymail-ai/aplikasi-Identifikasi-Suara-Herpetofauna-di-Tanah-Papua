@@ -54,8 +54,13 @@ def segmen_aktif(
 
 
 def peringatan_pita_datar(x: np.ndarray, sr: int, ambang_db: float = 6.0,
-                          pita: tuple[float, float] = PITA_KATAK) -> str | None:
-    """Energi pita hampir konstan (p95 − p5 < ambang): tidak ada jeda sebagai acuan derau."""
+                          pita: tuple[float, float] = PITA_KATAK,
+                          segmen: list[dict] | None = None) -> str | None:
+    """Energi pita hampir konstan (p95 − p5 < ambang) tanpa segmen aktif: tidak ada acuan derau."""
+    if segmen is None:
+        segmen = segmen_aktif(x, sr, pita=pita)
+    if segmen:
+        return None
     _, e = energi_pita(x, sr, pita=pita)
     if len(e) == 0:
         return None

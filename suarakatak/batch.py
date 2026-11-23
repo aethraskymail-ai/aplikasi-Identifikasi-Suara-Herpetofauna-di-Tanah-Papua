@@ -181,7 +181,7 @@ def _main(argv=None) -> int:
                         jangkrik_mean_db_sesudah=h.level_sesudah[kj]["mean_db"],
                         detik_aktif_pita_katak=akt["detik_aktif"],
                         persen_aktif_pita_katak=akt["persen_aktif"],
-                        catatan_aktivitas=deteksi.peringatan_pita_datar(x, sr) or "",
+                        catatan_aktivitas=deteksi.peringatan_pita_datar(x, sr, segmen=seg) or "",
                         status="ok",
                     )
                 if args.perch:

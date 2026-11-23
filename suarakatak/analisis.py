@@ -71,7 +71,7 @@ def analisis_file(path_asli, folder, nama_file: str, perch_terfilter: bool = Fal
                       f"Sesudah penyaringan, sebelum normalisasi (pita {pita[0]:g}–{pita[1]:g} Hz bergaris)",
                       gain_db=hasil.gain_db, pita=pita)
     segmen = deteksi.segmen_aktif(hasil.audio, hasil.sr, pita=pita)
-    datar = deteksi.peringatan_pita_datar(hasil.audio, hasil.sr, pita=pita)
+    datar = deteksi.peringatan_pita_datar(hasil.audio, hasil.sr, pita=pita, segmen=segmen)
     if datar:
         peringatan.append(datar)
 

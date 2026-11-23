@@ -258,3 +258,7 @@ def test_peringatan_pita_datar():
     assert deteksi.peringatan_pita_datar(np.zeros(sr, dtype=np.float32), sr)
     h = pipeline.jalankan(contoh.buat(durasi_s=20), contoh.SR)
     assert deteksi.peringatan_pita_datar(h.audio, h.sr) is None
+    t = np.arange(sr * 20) / sr
+    panggilan = desis + 0.5 * np.sin(2 * np.pi * 3000 * t) * ((t % 10) < 0.3)
+    assert deteksi.segmen_aktif(panggilan, sr)
+    assert deteksi.peringatan_pita_datar(panggilan, sr) is None
