@@ -69,7 +69,11 @@ python -m suarakatak.batch --masukan "I:/PAR" --keluaran "I:/HASIL_EKSTRAKSI/HAS
 Hanya file 17:30–21:00 (ubah dengan `--jam`). Hasil: `HASIL/<PAR>/<tanggal>/*.WAV` + `CONFIG.TXT`,
 `ringkasan.csv` (nada yang di-notch, level pita, % aktif pita katak) dan
 `embedding/<PAR>/*.npz` dengan `--perch`. Kolom `tebakan_perch_belum_terverifikasi`
-berisi tebakan model global, **bukan identifikasi spesies yang diverifikasi**. `status=ok`
+berisi tebakan model global, **bukan identifikasi spesies yang diverifikasi**.
+`catatan_aktivitas` terisi bila energi pita katak hampir konstan sepanjang rekaman (rentang
+p5–p95 < 6 dB, mis. hujan, desis, perekam rusak atau senyap): tanpa jeda sebagai acuan derau,
+aktivitas tidak dapat dinilai, sehingga 0% di kolom aktivitas bukan bukti tidak ada katak.
+Peringatan yang sama muncul di tab Analisis. `status=ok`
 hanya berarti pemrosesan berhasil. Perch batch memakai audio keluaran terfilter.
 
 Ganti jalur contoh dengan lokasi hardisk Anda (Linux, misalnya `--masukan /media/anda/PAR`).

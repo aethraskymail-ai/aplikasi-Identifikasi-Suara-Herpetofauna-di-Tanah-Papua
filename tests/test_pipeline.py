@@ -247,3 +247,18 @@ def test_rekaman_8khz_keluaran_48khz_tidak_menambah_pita_terukur():
     for level in (h.level_sebelum, h.level_sesudah):
         assert level["jangkrik (4300–6600 Hz)"] == {"mean_db": None, "max_db": None}
         assert level["katak (2400–3800 Hz)"]["mean_db"] is not None
+
+
+def test_peringatan_pita_datar():
+    sr = 48000
+    desis = np.random.default_rng(3).normal(0, 0.05, sr * 20).astype(np.float32)
+    pesan = deteksi.peringatan_pita_datar(desis, sr)
+    assert pesan and "0% bukan bukti tidak ada katak" in pesan
+    assert deteksi.segmen_aktif(desis, sr) == []
+    assert deteksi.peringatan_pita_datar(np.zeros(sr, dtype=np.float32), sr)
+    h = pipeline.jalankan(contoh.buat(durasi_s=20), contoh.SR)
+    assert deteksi.peringatan_pita_datar(h.audio, h.sr) is None
+    t = np.arange(sr * 20) / sr
+    panggilan = desis + 0.5 * np.sin(2 * np.pi * 3000 * t) * ((t % 10) < 0.3)
+    assert deteksi.segmen_aktif(panggilan, sr)
+    assert deteksi.peringatan_pita_datar(panggilan, sr) is None
